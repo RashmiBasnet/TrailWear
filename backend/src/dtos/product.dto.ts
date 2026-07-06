@@ -12,7 +12,7 @@ export const createProductSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   price: z.coerce.number().positive('Price must be positive'),
   stock: z.coerce.number().int().min(0).default(0),
-  images: z.array(z.string().url('Each image must be a valid URL')).default([]),
+  images: z.array(z.string()).optional(),
   categoryId: z.string().min(1, 'Category is required'),
 });
 

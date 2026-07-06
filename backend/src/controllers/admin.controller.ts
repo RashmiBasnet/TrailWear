@@ -17,12 +17,18 @@ export async function listProducts(req: Request, res: Response) {
 
 export async function createProduct(req: Request, res: Response) {
   const input = createProductSchema.parse(req.body);
-  const product = await productService.createProduct(input);
+  const files = req.files as Express.Multer.File[] | undefined;
+  const images = files ? files.map((file) => `/uploads/${file.filename}`) : [];
+  const product = await productService.createProduct({ ...input, images });
   res.status(201).json({ success: true, data: { product } });
 }
 
 export async function updateProduct(req: Request, res: Response) {
   const input = updateProductSchema.parse(req.body);
+  const files = req.files as Express.Multer.File[] | undefined;
+  if (files && files.length > 0) {
+    input.images = files.map((file) => `/uploads/${file.filename}`);
+  }
   const product = await productService.updateProduct(req.params.id, input);
   res.json({ success: true, data: { product } });
 }

@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
+import { UPLOAD_DIR } from './middleware/upload';
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
 import categoryRoutes from './routes/category.routes';
@@ -16,6 +17,8 @@ const app = express();
 app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+app.use('/uploads', express.static(UPLOAD_DIR));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
