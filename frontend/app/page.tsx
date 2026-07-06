@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { handleGetAllCategories } from "@/lib/actions/category-action";
 import { handleGetAllProducts } from "@/lib/actions/product-action";
-import ProductCard from "@/components/ProductCard";
+import ProductCard from "@/app/_components/ProductCard";
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +152,7 @@ export default async function Home() {
                 <div>
                     <Truck className="mx-auto h-6 w-6 text-navy-600" />
                     <p className="mt-2 text-sm font-semibold text-navy-800">Free delivery</p>
-                    <p className="mt-0.5 text-xs text-navy-400">On orders over $99</p>
+                    <p className="mt-0.5 text-xs text-navy-400">On orders over NRs. 10,000</p>
                 </div>
                 <div>
                     <ShieldCheck className="mx-auto h-6 w-6 text-navy-600" />
