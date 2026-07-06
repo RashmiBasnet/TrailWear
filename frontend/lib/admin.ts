@@ -18,7 +18,8 @@ export const createProduct = async (productData: any) => {
     try {
         const response = await axios.post(
             API.ADMIN.PRODUCT.CREATE,
-            productData
+            productData,
+            { headers: { "Content-Type": "multipart/form-data" } }
         );
         return response.data;
     } catch (err: Error | any) {
@@ -34,7 +35,8 @@ export const updateProduct = async (id: string, productData: any) => {
     try {
         const response = await axios.patch(
             API.ADMIN.PRODUCT.UPDATE(id),
-            productData
+            productData,
+            { headers: { "Content-Type": "multipart/form-data" } }
         );
         return response.data;
     } catch (err: Error | any) {

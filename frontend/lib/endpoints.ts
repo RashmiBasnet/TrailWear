@@ -9,6 +9,7 @@ export const API = {
     GET_ALL: (
       params?: {
         category?: string;
+        gender?: string;
         search?: string;
         page?: number;
         limit?: number;
@@ -19,6 +20,7 @@ export const API = {
       const q = new URLSearchParams();
 
       if (params.category) q.set("category", params.category);
+      if (params.gender) q.set("gender", params.gender);
       if (params.search) q.set("search", params.search);
       if (params.page !== undefined) q.set("page", String(params.page));
       if (params.limit !== undefined) q.set("limit", String(params.limit));
@@ -55,6 +57,7 @@ export const API = {
       GET_ALL: (
         params?: {
           category?: string;
+          gender?: string;
           search?: string;
           page?: number;
           limit?: number;
@@ -65,6 +68,7 @@ export const API = {
         const q = new URLSearchParams();
 
         if (params.category) q.set("category", params.category);
+        if (params.gender) q.set("gender", params.gender);
         if (params.search) q.set("search", params.search);
         if (params.page !== undefined) q.set("page", String(params.page));
         if (params.limit !== undefined) q.set("limit", String(params.limit));
