@@ -14,10 +14,10 @@ import type { Pagination } from '../types/common.types';
 export async function listProducts(
   query: ListProductsQueryDto
 ): Promise<{ products: ProductWithCategory[]; pagination: Pagination }> {
-  const { category, search, page, limit } = query;
+  const { category, gender, search, page, limit } = query;
 
   const { products, total } = await productRepository.findPage(
-    { categorySlug: category, search },
+    { categorySlug: category, gender, search },
     page,
     limit
   );

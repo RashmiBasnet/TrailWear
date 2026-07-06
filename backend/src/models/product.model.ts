@@ -11,6 +11,7 @@ export function toProduct(product: PrismaProduct): Product {
     id: product.id,
     name: product.name,
     description: product.description,
+    gender: product.gender,
     price: Number(product.price),
     stock: product.stock,
     images: product.images,

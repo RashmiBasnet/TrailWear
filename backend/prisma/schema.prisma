@@ -27,6 +27,12 @@ enum Role {
   ADMIN
 }
 
+enum Gender {
+  MEN
+  WOMEN
+  UNISEX
+}
+
 model Category {
   id          String    @id @default(cuid())
   name        String    @unique
@@ -40,6 +46,7 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   description String
+  gender      Gender   @default(UNISEX)
   price       Decimal  @db.Decimal(10, 2)
   stock       Int      @default(0)
   images      String[]

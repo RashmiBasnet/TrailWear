@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Gender, Prisma } from '@prisma/client';
 import { prisma } from '../config/db';
 import type { CreateProductDto, UpdateProductDto } from '../dtos/product.dto';
 
@@ -7,6 +7,7 @@ const PRODUCT_INCLUDE = { category: { select: CATEGORY_SUMMARY_SELECT } } as con
 
 export interface ProductFilter {
   categorySlug?: string;
+  gender?: Gender;
   search?: string;
 }
 
@@ -15,6 +16,10 @@ function buildWhere(filter: ProductFilter): Prisma.ProductWhereInput {
 
   if (filter.categorySlug) {
     where.category = { slug: filter.categorySlug };
+  }
+
+  if (filter.gender) {
+    where.gender = filter.gender;
   }
 
   if (filter.search) {
