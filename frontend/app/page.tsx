@@ -1,65 +1,175 @@
-import Image from "next/image";
+import Link from "next/link";
+import {
+    Shirt,
+    Footprints,
+    Backpack,
+    Tent,
+    Layers,
+    Compass,
+    Moon,
+    Watch,
+    Mountain,
+    Truck,
+    ShieldCheck,
+    RefreshCw,
+} from "lucide-react";
+import { handleGetAllCategories } from "@/lib/actions/category-action";
+import { handleGetAllProducts } from "@/lib/actions/product-action";
+import ProductCard from "@/components/ProductCard";
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+export const dynamic = "force-dynamic";
+
+const categoryIcons: Record<string, any> = {
+    "base-layers": Layers,
+    "outer-layers": Shirt,
+    jackets: Shirt,
+    shoes: Footprints,
+    pants: Shirt,
+    backpacks: Backpack,
+    "sleeping-bags": Moon,
+    tents: Tent,
+    accessories: Watch,
+    equipment: Compass,
+};
+
+export default async function Home() {
+    const [categoriesResult, productsResult] = await Promise.all([
+        handleGetAllCategories(),
+        handleGetAllProducts({ limit: 8 }),
+    ]);
+
+    const categories = categoriesResult.success ? categoriesResult.data.categories : [];
+    const products = productsResult.success ? productsResult.data.products : [];
+
+    return (
+        <main>
+            <section className="bg-navy-50">
+                <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-2">
+                    <div>
+                        <p className="text-sm font-semibold tracking-wide text-gold-700">Trek season 2026</p>
+                        <h1 className="mt-2 text-4xl font-bold leading-tight text-navy-800">
+                            Gear up for the Himalaya
+                        </h1>
+                        <p className="mt-3 max-w-md text-navy-400">
+                            All the layers, boots, and packs you need from basecamp to summit — trail tested in Nepal.
+                        </p>
+                        <div className="mt-6 flex gap-3">
+                            <Link
+                                href="/products"
+                                className="rounded-full bg-navy-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-navy-700"
+                            >
+                                Shop now
+                            </Link>
+                            <Link
+                                href="/products"
+                                className="rounded-full border-2 border-navy-600 px-6 py-2.5 text-sm font-medium text-navy-600 hover:bg-navy-100"
+                            >
+                                See all gear
+                            </Link>
+                        </div>
+                    </div>
+                    <img
+                        src="/hero.png"
+                        alt="Trekking gear — backpack, hiking boots, jacket, and tent against Himalayan peaks"
+                        className="hidden w-full md:block"
+                    />
+                </div>
+            </section>
+
+            <section className="mx-auto max-w-6xl px-4 py-12">
+                <div className="mb-6 flex items-end justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold text-navy-800">Shop by category</h2>
+                        <p className="mt-1 text-sm text-navy-400">Everything you need for the high mountains, sorted.</p>
+                    </div>
+                    <Link
+                        href="/products"
+                        className="hidden rounded-full border-2 border-navy-600 px-4 py-1.5 text-xs font-medium text-navy-600 hover:bg-navy-50 sm:block"
+                    >
+                        See all categories
+                    </Link>
+                </div>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                    {categories.map((category: any) => {
+                        const Icon = categoryIcons[category.slug] || Mountain;
+                        return (
+                            <Link
+                                key={category.id}
+                                href={`/products?category=${category.slug}`}
+                                className="rounded-xl bg-navy-50 p-5 text-center transition-colors hover:bg-navy-100"
+                            >
+                                <Icon className="mx-auto h-6 w-6 text-navy-600" />
+                                <p className="mt-2.5 text-sm font-medium text-navy-800">{category.name}</p>
+                                <p className="mt-0.5 text-xs text-navy-400">{category.productCount} products</p>
+                            </Link>
+                        );
+                    })}
+                </div>
+            </section>
+
+            <section className="mx-auto max-w-6xl px-4 pb-12">
+                <div className="mb-6 flex items-end justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold text-navy-800">Our featured gear</h2>
+                        <p className="mt-1 text-sm text-navy-400">Bucket-list ready equipment — grab it before the season starts.</p>
+                    </div>
+                    <Link
+                        href="/products"
+                        className="hidden rounded-full border-2 border-navy-600 px-4 py-1.5 text-xs font-medium text-navy-600 hover:bg-navy-50 sm:block"
+                    >
+                        See all gear
+                    </Link>
+                </div>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    {products.map((product: any) => (
+                        <ProductCard key={product.id} product={product} />
+                    ))}
+                </div>
+            </section>
+
+            <section className="bg-navy-800">
+                <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-8 text-center md:grid-cols-4">
+                    <div>
+                        <p className="text-2xl font-bold text-gold-400">30+</p>
+                        <p className="mt-1 text-sm text-navy-200">Products in stock</p>
+                    </div>
+                    <div>
+                        <p className="text-2xl font-bold text-gold-400">10</p>
+                        <p className="mt-1 text-sm text-navy-200">Gear categories</p>
+                    </div>
+                    <div>
+                        <p className="text-2xl font-bold text-gold-400">24/7</p>
+                        <p className="mt-1 text-sm text-navy-200">Customer support</p>
+                    </div>
+                    <div>
+                        <p className="text-2xl font-bold text-gold-400">100%</p>
+                        <p className="mt-1 text-sm text-navy-200">Secure checkout</p>
+                    </div>
+                </div>
+            </section>
+
+            <section className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-12 text-center md:grid-cols-4">
+                <div>
+                    <Truck className="mx-auto h-6 w-6 text-navy-600" />
+                    <p className="mt-2 text-sm font-semibold text-navy-800">Free delivery</p>
+                    <p className="mt-0.5 text-xs text-navy-400">On orders over $99</p>
+                </div>
+                <div>
+                    <ShieldCheck className="mx-auto h-6 w-6 text-navy-600" />
+                    <p className="mt-2 text-sm font-semibold text-navy-800">Secure payment</p>
+                    <p className="mt-0.5 text-xs text-navy-400">Encrypted checkout</p>
+                </div>
+                <div>
+                    <RefreshCw className="mx-auto h-6 w-6 text-navy-600" />
+                    <p className="mt-2 text-sm font-semibold text-navy-800">Easy returns</p>
+                    <p className="mt-0.5 text-xs text-navy-400">30-day return window</p>
+                </div>
+                <div>
+                    <Mountain className="mx-auto h-6 w-6 text-navy-600" />
+                    <p className="mt-2 text-sm font-semibold text-navy-800">Trail tested</p>
+                    <p className="mt-0.5 text-xs text-navy-400">Gear proven in Nepal</p>
+                </div>
+            </section>
+        </main>
+    );
 }
