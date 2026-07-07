@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 import { handleGetAllProducts } from "@/lib/actions/product-action";
 import { handleGetAllCategories } from "@/lib/actions/category-action";
 import ProductCard from "@/app/_components/ProductCard";
@@ -25,16 +25,11 @@ function ProductsContent() {
     const search = searchParams.get("search") || "";
     const page = Number(searchParams.get("page")) || 1;
 
-    const [searchInput, setSearchInput] = useState(search);
     const [categories, setCategories] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-
-    useEffect(() => {
-        setSearchInput(search);
-    }, [search]);
 
     useEffect(() => {
         const load = async () => {
@@ -78,32 +73,28 @@ function ProductsContent() {
         [router, searchParams]
     );
 
-    const onSearchSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        updateParams({ search: searchInput.trim() || null });
-    };
-
     return (
         <main className="mx-auto max-w-6xl px-4 py-8">
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-navy-800">All gear</h1>
-                <p className="mt-1 text-sm text-navy-400">{pagination.total} products</p>
+                <p className="mt-1 text-sm text-navy-400">
+                    {pagination.total} products
+                    {search && (
+                        <>
+                            {" "}for <span className="font-medium text-navy-600">&quot;{search}&quot;</span>{" "}
+                            <button
+                                onClick={() => updateParams({ search: null })}
+                                className="ml-1 inline-flex items-center gap-0.5 text-navy-400 hover:text-navy-700"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                                Clear
+                            </button>
+                        </>
+                    )}
+                </p>
             </div>
 
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <form onSubmit={onSearchSubmit} className="relative max-w-sm flex-1">
-                    <input
-                        type="text"
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        placeholder="Search jackets, boots, tents…"
-                        className="w-full rounded-full border border-border bg-white py-2 pl-4 pr-10 text-sm text-navy-800 placeholder:text-navy-300 focus:border-navy-400 focus:outline-none"
-                    />
-                    <button type="submit" aria-label="Search" className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-400">
-                        <Search className="h-4 w-4" />
-                    </button>
-                </form>
-
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
                 <div className="flex items-center gap-2">
                     <SlidersHorizontal className="hidden h-4 w-4 text-navy-400 sm:block" />
                     <select
