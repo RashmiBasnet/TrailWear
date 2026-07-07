@@ -5,21 +5,24 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 
 export default function LoginPage() {
     const { user, loading, login } = useAuth();
+    const toast = useToast();
     const router = useRouter();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [redirecting, setRedirecting] = useState(false);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        if (loading || !user) return;
+        if (loading || !user || redirecting) return;
         router.replace(user.role === "ADMIN" ? "/admin" : "/");
-    }, [user, loading, router]);
+    }, [user, loading, redirecting, router]);
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,6 +30,7 @@ export default function LoginPage() {
 
         if (!email.trim() || !password) {
             setError("Please enter your email and password.");
+            toast.error("Missing login details", "Please enter your email and password.");
             return;
         }
 
@@ -36,9 +40,13 @@ export default function LoginPage() {
 
         if (result.success) {
             const role = result.data?.user?.role;
+            setRedirecting(true);
+            toast.success("Logged in", "Welcome back to TrailWear.");
             router.replace(role === "ADMIN" ? "/admin" : "/");
         } else {
-            setError(result.message || "Login failed.");
+            const message = result.message || "Login failed.";
+            setError(message);
+            toast.error("Login failed", message);
         }
     };
 

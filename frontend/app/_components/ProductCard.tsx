@@ -1,7 +1,30 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { useToast } from "@/context/ToastContext";
 
 export default function ProductCard({ product }: { product: any }) {
+    const { user } = useAuth();
+    const { isWishlisted, toggle } = useWishlist();
+    const toast = useToast();
+    const router = useRouter();
+    const wishlisted = isWishlisted(product.id);
+
+    const onWishlistClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!user) {
+            toast.info("Log in to save items", "Your wishlist is saved to your account.");
+            router.push("/login");
+            return;
+        }
+        toggle(product);
+    };
+
     return (
         <Link
             href={`/products/${product.id}`}
@@ -15,9 +38,14 @@ export default function ProductCard({ product }: { product: any }) {
                         className="h-full w-full object-cover"
                     />
                 )}
-                <span className="absolute left-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-cream">
-                    <Heart className="h-4 w-4 text-gold-700" />
-                </span>
+                <button
+                    type="button"
+                    onClick={onWishlistClick}
+                    aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                    className="absolute left-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-cream hover:bg-gold-200"
+                >
+                    <Heart className={`h-4 w-4 text-gold-700 ${wishlisted ? "fill-gold-700" : ""}`} />
+                </button>
             </div>
             <div className="p-3.5">
                 <p className="text-xs text-navy-300">{product.category?.name}</p>

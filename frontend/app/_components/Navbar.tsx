@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Search, Heart, ShoppingCart, User, LogOut, Shield, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { useToast } from "@/context/ToastContext";
 import { handleGetAllCategories } from "@/lib/actions/category-action";
 
 const CATEGORY_GROUPS = [
@@ -15,6 +17,8 @@ const FOOTWEAR_SLUG = "shoes";
 
 export default function Navbar() {
     const { user, loading, logout } = useAuth();
+    const { wishlist } = useWishlist();
+    const toast = useToast();
     const [search, setSearch] = useState("");
     const [categories, setCategories] = useState<{ name: string; slug: string }[]>([]);
     const [openGroup, setOpenGroup] = useState<string | null>(null);
@@ -64,6 +68,15 @@ export default function Navbar() {
         }
     };
 
+    const onLogout = async () => {
+        const result = await logout();
+        if (result.success) {
+            toast.success("Logged out", "See you on the next trail.");
+        } else {
+            toast.error("Logout failed", result.message || "Please try again.");
+        }
+    };
+
     return (
         <header>
             <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
@@ -83,8 +96,13 @@ export default function Navbar() {
                     </button>
                 </form>
                 <nav className="ml-auto flex items-center gap-5 text-navy-600">
-                    <Link href="/wishlist" aria-label="Wishlist" className="hover:text-navy-800">
+                    <Link href="/wishlist" aria-label="Wishlist" className="relative hover:text-navy-800">
                         <Heart className="h-5 w-5" />
+                        {user && wishlist.length > 0 && (
+                            <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-gold-400 text-[10px] font-semibold text-navy-800">
+                                {wishlist.length}
+                            </span>
+                        )}
                     </Link>
                     <Link href="/cart" aria-label="Cart" className="hover:text-navy-800">
                         <ShoppingCart className="h-5 w-5" />
@@ -105,7 +123,7 @@ export default function Navbar() {
                                     <User className="h-5 w-5" />
                                     <span className="hidden sm:inline">{user.name.split(" ")[0]}</span>
                                 </Link>
-                                <button onClick={logout} aria-label="Logout" className="text-navy-400 hover:text-navy-800">
+                                <button onClick={onLogout} aria-label="Logout" className="text-navy-400 hover:text-navy-800">
                                     <LogOut className="h-4 w-4" />
                                 </button>
                             </div>

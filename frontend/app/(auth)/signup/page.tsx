@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Eye, EyeOff, Lock, Mail, User, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 
 const PASSWORD_REQUIREMENTS = [
     { key: "length", label: "At least 8 characters", test: (pw: string) => pw.length >= 8 },
@@ -28,6 +29,7 @@ function getPasswordStrength(password: string) {
 
 export default function SignupPage() {
     const { user, loading, register } = useAuth();
+    const toast = useToast();
     const router = useRouter();
 
     const [name, setName] = useState("");
@@ -37,14 +39,15 @@ export default function SignupPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [redirecting, setRedirecting] = useState(false);
     const [error, setError] = useState("");
 
     const strength = getPasswordStrength(password);
 
     useEffect(() => {
-        if (loading || !user) return;
+        if (loading || !user || redirecting) return;
         router.replace(user.role === "ADMIN" ? "/admin" : "/");
-    }, [user, loading, router]);
+    }, [user, loading, redirecting, router]);
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,14 +55,17 @@ export default function SignupPage() {
 
         if (!name.trim() || !email.trim() || !password || !confirmPassword) {
             setError("Please fill in all fields.");
+            toast.error("Missing signup details", "Please fill in all fields.");
             return;
         }
         if (!strength.isStrong) {
             setError("Password must meet all the strength requirements below.");
+            toast.error("Password is too weak", "Please meet all password requirements.");
             return;
         }
         if (password !== confirmPassword) {
             setError("Passwords do not match.");
+            toast.error("Passwords do not match", "Please re-enter the same password.");
             return;
         }
 
@@ -69,9 +75,13 @@ export default function SignupPage() {
 
         if (result.success) {
             const role = result.data?.user?.role;
+            setRedirecting(true);
+            toast.success("Account created", "Welcome to TrailWear.");
             router.replace(role === "ADMIN" ? "/admin" : "/");
         } else {
-            setError(result.message || "Registration failed.");
+            const message = result.message || "Registration failed.";
+            setError(message);
+            toast.error("Registration failed", message);
         }
     };
 

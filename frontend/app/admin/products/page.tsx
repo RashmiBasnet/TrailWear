@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { handleGetAdminProducts, handleDeleteProduct } from "@/lib/actions/admin-action";
+import { useToast } from "@/context/ToastContext";
 
 const LIMIT = 10;
 const genderLabels: Record<string, string> = {
@@ -13,6 +14,7 @@ const genderLabels: Record<string, string> = {
 };
 
 export default function AdminProducts() {
+    const toast = useToast();
     const [products, setProducts] = useState<any[]>([]);
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
     const [search, setSearch] = useState("");
@@ -54,13 +56,16 @@ export default function AdminProducts() {
         const result = await handleDeleteProduct(id);
         setDeletingId("");
         if (result.success) {
+            toast.success("Product deleted", `${name} was removed.`);
             if (products.length === 1 && page > 1) {
                 setPage(page - 1);
             } else {
                 load();
             }
         } else {
-            setError(result.message || "Failed to delete product.");
+            const message = result.message || "Failed to delete product.";
+            setError(message);
+            toast.error("Could not delete product", message);
         }
     };
 
