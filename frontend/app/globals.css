@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+:root {
+  --navy-50: #e9eef8;
+  --navy-100: #d5def0;
+  --navy-200: #afc0e4;
+  --navy-300: #8fa3cc;
+  --navy-400: #52679e;
+  --navy-500: #3a4c7e;
+  --navy-600: #2a3e6f;
+  --navy-700: #24355f;
+  --navy-800: #1f2e54;
+  --navy-900: #16213d;
+
+  --gold-50: #fbf5e4;
+  --gold-100: #f7ecd3;
+  --gold-200: #efdca8;
+  --gold-300: #e5c670;
+  --gold-400: #d9a93f;
+  --gold-500: #c89a2e;
+  --gold-600: #a87f1d;
+  --gold-700: #8a6414;
+  --gold-800: #6b4e10;
+  --gold-900: #4c370b;
+
+  --background: #ffffff;
+  --foreground: var(--navy-800);
+  --surface: #ffffff;
+  --surface-tint: var(--navy-50);
+  --primary: var(--navy-600);
+  --primary-hover: var(--navy-700);
+  --primary-dark: var(--navy-800);
+  --muted: var(--navy-400);
+  --border: #dde4f0;
+  --accent: var(--gold-400);
+  --accent-hover: var(--gold-500);
+  --cream: var(--gold-100);
+  --on-accent: var(--navy-800);
+  --on-cream: var(--gold-700);
+  --success: #16a34a;
+  --danger: #dc2626;
+}
+
+@theme inline {
+  --color-navy-50: var(--navy-50);
+  --color-navy-100: var(--navy-100);
+  --color-navy-200: var(--navy-200);
+  --color-navy-300: var(--navy-300);
+  --color-navy-400: var(--navy-400);
+  --color-navy-500: var(--navy-500);
+  --color-navy-600: var(--navy-600);
+  --color-navy-700: var(--navy-700);
+  --color-navy-800: var(--navy-800);
+  --color-navy-900: var(--navy-900);
+
+  --color-gold-50: var(--gold-50);
+  --color-gold-100: var(--gold-100);
+  --color-gold-200: var(--gold-200);
+  --color-gold-300: var(--gold-300);
+  --color-gold-400: var(--gold-400);
+  --color-gold-500: var(--gold-500);
+  --color-gold-600: var(--gold-600);
+  --color-gold-700: var(--gold-700);
+  --color-gold-800: var(--gold-800);
+  --color-gold-900: var(--gold-900);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-tint: var(--surface-tint);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-dark: var(--primary-dark);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-cream: var(--cream);
+  --color-on-accent: var(--on-accent);
+  --color-on-cream: var(--on-cream);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+
+  --radius-card: 10px;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
