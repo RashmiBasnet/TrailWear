@@ -213,13 +213,13 @@ export default function CartPage() {
                                 <span className="text-lg font-bold text-navy-800">{formatPrice(cart.subtotal)}</span>
                             </div>
                         </div>
-                        <button
-                            type="button"
+                        <Link
+                            href="/checkout"
                             className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-navy-600 px-6 py-3 text-sm font-semibold text-white hover:bg-navy-700"
                         >
                             <Lock className="h-3.5 w-3.5" />
                             Checkout
-                        </button>
+                        </Link>
                         <Link
                             href="/products"
                             className="mt-3 block rounded-full border-2 border-navy-600 px-6 py-2.5 text-center text-sm font-medium text-navy-600 hover:bg-navy-50"
