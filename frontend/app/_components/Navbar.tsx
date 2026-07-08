@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Search, Heart, ShoppingCart, User, LogOut, Shield, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { handleGetAllCategories } from "@/lib/actions/category-action";
 
@@ -18,6 +19,7 @@ const FOOTWEAR_SLUG = "shoes";
 export default function Navbar() {
     const { user, loading, logout } = useAuth();
     const { wishlist } = useWishlist();
+    const { itemCount } = useCart();
     const toast = useToast();
     const [search, setSearch] = useState("");
     const [categories, setCategories] = useState<{ name: string; slug: string }[]>([]);
@@ -104,8 +106,13 @@ export default function Navbar() {
                             </span>
                         )}
                     </Link>
-                    <Link href="/cart" aria-label="Cart" className="hover:text-navy-800">
+                    <Link href="/cart" aria-label="Cart" className="relative hover:text-navy-800">
                         <ShoppingCart className="h-5 w-5" />
+                        {user && itemCount > 0 && (
+                            <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-gold-400 text-[10px] font-semibold text-navy-800">
+                                {itemCount}
+                            </span>
+                        )}
                     </Link>
                     {user?.role === "ADMIN" && (
                         <Link

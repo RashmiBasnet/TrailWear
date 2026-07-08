@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
 import LayoutShell from "@/app/_components/LayoutShell";
 
@@ -35,7 +36,9 @@ export default function RootLayout({
         <ToastProvider>
           <AuthProvider>
             <WishlistProvider>
-              <LayoutShell>{children}</LayoutShell>
+              <CartProvider>
+                <LayoutShell>{children}</LayoutShell>
+              </CartProvider>
             </WishlistProvider>
           </AuthProvider>
         </ToastProvider>
