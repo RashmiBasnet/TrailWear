@@ -25,6 +25,7 @@ export default function AdminProductForm({ product }: { product?: any }) {
     const [stock, setStock] = useState(product ? String(product.stock) : "0");
     const [categoryId, setCategoryId] = useState(product?.categoryId || "");
     const [gender, setGender] = useState(product?.gender || "UNISEX");
+    const [sizes, setSizes] = useState(product?.sizes ? product.sizes.join(", ") : "");
     const [files, setFiles] = useState<File[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
@@ -70,6 +71,7 @@ export default function AdminProductForm({ product }: { product?: any }) {
         formData.append("price", price);
         formData.append("stock", stock || "0");
         formData.append("gender", gender);
+        formData.append("sizes", sizes.trim());
         formData.append("categoryId", categoryId);
         files.forEach((file) => formData.append("images", file));
 
@@ -149,7 +151,7 @@ export default function AdminProductForm({ product }: { product?: any }) {
                 </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                     <label className="mb-1.5 block text-sm font-medium text-navy-800">Category</label>
                     <select
@@ -178,6 +180,21 @@ export default function AdminProductForm({ product }: { product?: any }) {
                             </option>
                         ))}
                     </select>
+                </div>
+                <div>
+                    <label className="mb-1.5 block text-sm font-medium text-navy-800">
+                        Available sizes <span className="text-navy-400">(optional)</span>
+                    </label>
+                    <input
+                        type="text"
+                        value={sizes}
+                        onChange={(e) => setSizes(e.target.value)}
+                        placeholder="S, M, L, XL"
+                        className="w-full rounded-lg border border-border bg-white px-3.5 py-2 text-sm text-navy-800 placeholder:text-navy-300 focus:border-navy-400 focus:outline-none"
+                    />
+                    <p className="mt-1 text-xs text-navy-300">
+                        Comma-separated. Customers pick one before adding to cart. Leave blank if this product has no sizes.
+                    </p>
                 </div>
             </div>
 

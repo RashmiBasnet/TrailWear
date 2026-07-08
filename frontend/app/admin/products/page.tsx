@@ -111,6 +111,7 @@ export default function AdminProducts() {
                             <th className="px-4 py-3 font-semibold">Product</th>
                             <th className="px-4 py-3 font-semibold">Category</th>
                             <th className="px-4 py-3 font-semibold">Gender</th>
+                            <th className="px-4 py-3 font-semibold">Size</th>
                             <th className="px-4 py-3 font-semibold">Price</th>
                             <th className="px-4 py-3 font-semibold">Stock</th>
                             <th className="px-4 py-3 text-right font-semibold">Actions</th>
@@ -119,11 +120,11 @@ export default function AdminProducts() {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={6} className="px-4 py-10 text-center text-navy-400">Loading…</td>
+                                <td colSpan={7} className="px-4 py-10 text-center text-navy-400">Loading…</td>
                             </tr>
                         ) : products.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="px-4 py-10 text-center text-navy-400">
+                                <td colSpan={7} className="px-4 py-10 text-center text-navy-400">
                                     No products found.
                                 </td>
                             </tr>
@@ -146,6 +147,9 @@ export default function AdminProducts() {
                                     </td>
                                     <td className="px-4 py-3 text-navy-600">{product.category?.name}</td>
                                     <td className="px-4 py-3 text-navy-600">{genderLabels[product.gender] || product.gender}</td>
+                                    <td className="px-4 py-3 text-navy-600">
+                                        {product.sizes?.length > 0 ? product.sizes.join(", ") : "—"}
+                                    </td>
                                     <td className="px-4 py-3 font-medium text-navy-800">
                                         NRs. {Number(product.price).toFixed(2)}
                                     </td>

@@ -47,6 +47,7 @@ model Product {
   name        String
   description String
   gender      Gender   @default(UNISEX)
+  sizes       String[] @default([])
   price       Decimal  @db.Decimal(10, 2)
   stock       Int      @default(0)
   images      String[]
@@ -74,8 +75,9 @@ model CartItem {
   productId String
   product   Product @relation(fields: [productId], references: [id])
   quantity  Int     @default(1)
+  size      String  @default("")
 
-  @@unique([cartId, productId])
+  @@unique([cartId, productId, size])
 }
 
 model WishlistItem {

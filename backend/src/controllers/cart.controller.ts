@@ -8,8 +8,8 @@ export async function getCart(req: Request, res: Response) {
 }
 
 export async function addItem(req: Request, res: Response) {
-  const { productId, quantity } = addCartItemSchema.parse(req.body);
-  const cart = await cartService.addItem(req.user!.id, productId, quantity);
+  const { productId, quantity, size } = addCartItemSchema.parse(req.body);
+  const cart = await cartService.addItem(req.user!.id, productId, quantity, size);
   res.status(201).json({ success: true, data: { cart } });
 }
 
