@@ -52,6 +52,11 @@ export const API = {
     ADD_ADDRESS: "/api/profile/address",
     GET_ADDRESSES: "/api/profile/address",
   },
+  ORDER: {
+    CREATE: "/api/orders",
+    GET_ALL: "/api/orders",
+    GET_BY_ID: (id: string) => `/api/orders/${id}`,
+  },
   ADMIN: {
     PRODUCT: {
       GET_ALL: (

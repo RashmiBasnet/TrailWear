@@ -8,3 +8,7 @@ export function create(userId: string, data: CreateAddressDto) {
 export function findByUser(userId: string) {
   return prisma.address.findMany({ where: { userId } });
 }
+
+export function findByIdForUser(id: string, userId: string) {
+  return prisma.address.findFirst({ where: { id, userId } });
+}

@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
-import Navbar from "@/app/_components/Navbar";
-import Footer from "@/app/_components/Footer";
+import { WishlistProvider } from "@/context/WishlistContext";
+import { CartProvider } from "@/context/CartContext";
+import { ToastProvider } from "@/context/ToastContext";
+import LayoutShell from "@/app/_components/LayoutShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +33,15 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthProvider>
-          <Navbar />
-          {children}
-          <Footer />
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <WishlistProvider>
+              <CartProvider>
+                <LayoutShell>{children}</LayoutShell>
+              </CartProvider>
+            </WishlistProvider>
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );

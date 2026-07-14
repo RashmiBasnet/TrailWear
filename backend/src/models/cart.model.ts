@@ -12,6 +12,7 @@ export function toCartItem(
   return {
     id: item.id,
     quantity: item.quantity,
+    size: item.size,
     product: toProductWithCategory(item.product),
   };
 }

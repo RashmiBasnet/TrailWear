@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { handleCreateCategory } from "@/lib/actions/admin-action";
 import { handleGetAllCategories } from "@/lib/actions/category-action";
+import { useToast } from "@/context/ToastContext";
 
 const slugify = (value: string) =>
     value
@@ -14,6 +15,7 @@ const slugify = (value: string) =>
 const SLUG_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export default function AdminCategories() {
+    const toast = useToast();
     const [categories, setCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -49,10 +51,12 @@ export default function AdminCategories() {
 
         if (!name.trim() || !slug.trim()) {
             setError("Name and slug are required.");
+            toast.error("Missing category details", "Name and slug are required.");
             return;
         }
         if (!SLUG_REGEX.test(slug)) {
             setError("Slug must be kebab-case (lowercase letters, numbers and single hyphens).");
+            toast.error("Invalid slug", "Use lowercase letters, numbers, and single hyphens.");
             return;
         }
 
@@ -65,13 +69,16 @@ export default function AdminCategories() {
 
         if (result.success) {
             setSuccess("Category created.");
+            toast.success("Category created", `${name.trim()} is ready to use.`);
             setName("");
             setSlug("");
             setSlugEdited(false);
             setDescription("");
             load();
         } else {
-            setError(result.message || "Failed to create category.");
+            const message = result.message || "Failed to create category.";
+            setError(message);
+            toast.error("Could not create category", message);
         }
     };
 

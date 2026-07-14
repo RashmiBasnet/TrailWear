@@ -5,6 +5,7 @@ export interface Product {
   name: string;
   description: string;
   gender: 'MEN' | 'WOMEN' | 'UNISEX';
+  sizes: string[];
   price: number;
   stock: number;
   images: string[];

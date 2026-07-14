@@ -14,6 +14,14 @@ export const createProductSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   description: z.string().min(1, 'Description is required'),
   gender: productGenderSchema.default('UNISEX'),
+  sizes: z
+    .union([z.array(z.string()), z.string()])
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      const list = Array.isArray(val) ? val : val.split(',');
+      return list.map((s) => s.trim()).filter(Boolean);
+    }),
   price: z.coerce.number().positive('Price must be positive'),
   stock: z.coerce.number().int().min(0).default(0),
   images: z.array(z.string()).optional(),

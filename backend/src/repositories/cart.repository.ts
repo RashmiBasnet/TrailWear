@@ -23,10 +23,10 @@ export function upsertForUser(userId: string) {
   });
 }
 
-export function upsertItem(cartId: string, productId: string, quantity: number) {
+export function upsertItem(cartId: string, productId: string, quantity: number, size: string) {
   return prisma.cartItem.upsert({
-    where: { cartId_productId: { cartId, productId } },
-    create: { cartId, productId, quantity },
+    where: { cartId_productId_size: { cartId, productId, size } },
+    create: { cartId, productId, quantity, size },
     update: { quantity: { increment: quantity } },
   });
 }

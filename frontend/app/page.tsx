@@ -95,7 +95,7 @@ export default async function Home() {
                         return (
                             <Link
                                 key={category.id}
-                                href={`/products?category=${category.slug}`}
+                                href={`/categories/${category.slug}`}
                                 className="rounded-xl bg-navy-50 p-5 text-center transition-colors hover:bg-navy-100"
                             >
                                 <Icon className="mx-auto h-6 w-6 text-navy-600" />

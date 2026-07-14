@@ -12,15 +12,25 @@ export async function getCart(userId: string): Promise<CartSummary> {
 export async function addItem(
   userId: string,
   productId: string,
-  quantity: number
+  quantity: number,
+  size: string
 ): Promise<CartSummary> {
   const product = await productRepository.findById(productId);
   if (!product) {
     throw new AppError(404, 'Product not found');
   }
 
+  if (product.sizes.length > 0) {
+    if (!size) {
+      throw new AppError(400, 'Please select a size');
+    }
+    if (!product.sizes.includes(size)) {
+      throw new AppError(400, 'Invalid size selected');
+    }
+  }
+
   const cart = await cartRepository.upsertForUser(userId);
-  await cartRepository.upsertItem(cart.id, productId, quantity);
+  await cartRepository.upsertItem(cart.id, productId, quantity, size);
 
   return getCart(userId);
 }
