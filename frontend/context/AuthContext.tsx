@@ -42,8 +42,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return result;
     };
 
+    const refreshUser = async () => {
+        const result = await handleGetMe();
+        if (result.success) {
+            setUser(result.data.user);
+        }
+        return result;
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, register, login, logout }}>
+        <AuthContext.Provider value={{ user, loading, register, login, logout, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );
