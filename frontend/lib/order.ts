@@ -39,3 +39,29 @@ export const getOrderById = async (id: string) => {
         );
     }
 }
+
+export const initiateEsewa = async (orderData: any) => {
+    try {
+        const response = await axios.post(API.ORDER.ESEWA_INITIATE, orderData);
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Failed to start eSewa payment"
+        );
+    }
+}
+
+export const verifyEsewa = async (data: string) => {
+    try {
+        const response = await axios.post(API.ORDER.ESEWA_VERIFY, { data });
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Failed to verify eSewa payment"
+        );
+    }
+}

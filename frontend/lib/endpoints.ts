@@ -56,6 +56,8 @@ export const API = {
     CREATE: "/api/orders",
     GET_ALL: "/api/orders",
     GET_BY_ID: (id: string) => `/api/orders/${id}`,
+    ESEWA_INITIATE: "/api/orders/esewa/initiate",
+    ESEWA_VERIFY: "/api/orders/esewa/verify",
   },
   ADMIN: {
     PRODUCT: {

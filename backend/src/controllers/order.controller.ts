@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import * as orderService from '../services/order.service';
-import { createOrderSchema } from '../dtos/order.dto';
+import { createOrderSchema, verifyEsewaSchema } from '../dtos/order.dto';
 
 export async function listOrders(req: Request, res: Response) {
   const orders = await orderService.listOrders(req.user!.id);
@@ -16,4 +16,16 @@ export async function createOrder(req: Request, res: Response) {
   const input = createOrderSchema.parse(req.body);
   const order = await orderService.createOrder(req.user!.id, input);
   res.status(201).json({ success: true, data: { order } });
+}
+
+export async function initiateEsewa(req: Request, res: Response) {
+  const input = createOrderSchema.parse(req.body);
+  const payment = await orderService.initiateEsewaPayment(req.user!.id, input);
+  res.status(201).json({ success: true, data: payment });
+}
+
+export async function verifyEsewa(req: Request, res: Response) {
+  const input = verifyEsewaSchema.parse(req.body);
+  const order = await orderService.verifyEsewaPayment(req.user!.id, input);
+  res.json({ success: true, data: { order } });
 }

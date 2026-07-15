@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { handleGetAddresses, handleAddAddress } from "@/lib/actions/profile-action";
-import { handleCreateOrder } from "@/lib/actions/order-action";
+import { handleCreateOrder, handleInitiateEsewa } from "@/lib/actions/order-action";
 
 const formatPrice = (value: number) => `NRs. ${Number(value).toFixed(2)}`;
 
@@ -21,6 +21,7 @@ export default function CheckoutPage() {
     const [addresses, setAddresses] = useState<any[]>([]);
     const [addressesLoading, setAddressesLoading] = useState(true);
     const [selectedAddressId, setSelectedAddressId] = useState("");
+    const [paymentMethod, setPaymentMethod] = useState<"COD" | "ESEWA">("COD");
     const [showAddForm, setShowAddForm] = useState(false);
     const [placing, setPlacing] = useState(false);
     const [error, setError] = useState("");
@@ -97,13 +98,38 @@ export default function CheckoutPage() {
 
         setError("");
         setPlacing(true);
+
+        if (paymentMethod === "ESEWA") {
+            const result = await handleInitiateEsewa({ addressId: selectedAddressId });
+            if (result.success && result.data.formUrl) {
+                // eSewa requires a form POST to its hosted payment page.
+                const form = document.createElement("form");
+                form.method = "POST";
+                form.action = result.data.formUrl;
+                Object.entries(result.data.fields).forEach(([name, value]) => {
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = name;
+                    input.value = String(value);
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+                form.submit();
+                return;
+            }
+            setPlacing(false);
+            setError(result.message || "Could not start eSewa payment.");
+            toast.error("Could not start payment", result.message || "Please try again.");
+            return;
+        }
+
         const result = await handleCreateOrder({ addressId: selectedAddressId });
         setPlacing(false);
 
         if (result.success) {
             await refresh();
             toast.success("Order placed", "Thanks for your order!");
-            router.push(`/orders/${result.data.order.id}`);
+            router.push(`/orders/${result.data.order.id}?placed=1`);
         } else {
             setError(result.message || "Could not place order.");
             toast.error("Could not place order", result.message || "Please try again.");
@@ -263,11 +289,46 @@ export default function CheckoutPage() {
                     <section className="rounded-xl border border-border bg-white p-5">
                         <h2 className="text-base font-semibold text-navy-800">Payment method</h2>
                         <div className="mt-4 space-y-2">
-                            <label className="flex items-center gap-3 rounded-lg border border-navy-600 bg-navy-50 p-3.5 text-sm">
-                                <input type="radio" checked readOnly className="accent-navy-600" />
+                            <label
+                                className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3.5 text-sm transition-colors ${
+                                    paymentMethod === "COD"
+                                        ? "border-navy-600 bg-navy-50"
+                                        : "border-border hover:border-navy-300"
+                                }`}
+                            >
+                                <input
+                                    type="radio"
+                                    name="payment"
+                                    checked={paymentMethod === "COD"}
+                                    onChange={() => setPaymentMethod("COD")}
+                                    className="accent-navy-600"
+                                />
                                 <span className="font-medium text-navy-800">Cash on Delivery</span>
                             </label>
-                            {["Visa / Mastercard", "eSewa", "Khalti"].map((method) => (
+
+                            <label
+                                className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3.5 text-sm transition-colors ${
+                                    paymentMethod === "ESEWA"
+                                        ? "border-navy-600 bg-navy-50"
+                                        : "border-border hover:border-navy-300"
+                                }`}
+                            >
+                                <span className="flex items-center gap-3">
+                                    <input
+                                        type="radio"
+                                        name="payment"
+                                        checked={paymentMethod === "ESEWA"}
+                                        onChange={() => setPaymentMethod("ESEWA")}
+                                        className="accent-navy-600"
+                                    />
+                                    <span className="font-medium text-navy-800">eSewa</span>
+                                </span>
+                                <span className="rounded-full bg-[#60bb46]/10 px-2 py-0.5 text-xs font-semibold text-[#3d8f2a]">
+                                    Digital wallet
+                                </span>
+                            </label>
+
+                            {["Visa / Mastercard", "Khalti"].map((method) => (
                                 <label
                                     key={method}
                                     className="flex items-center justify-between gap-3 rounded-lg border border-border p-3.5 text-sm text-navy-300"
@@ -346,7 +407,13 @@ export default function CheckoutPage() {
                         className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-full bg-navy-600 px-6 py-3 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-60"
                     >
                         <Lock className="h-3.5 w-3.5" />
-                        {placing ? "Placing order…" : "Place order"}
+                        {placing
+                            ? paymentMethod === "ESEWA"
+                                ? "Redirecting to eSewa…"
+                                : "Placing order…"
+                            : paymentMethod === "ESEWA"
+                                ? "Pay with eSewa"
+                                : "Place order"}
                     </button>
 
                     <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-navy-300">
