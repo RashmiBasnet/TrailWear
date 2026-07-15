@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import MfaSettings from "@/app/_components/MfaSettings";
 import {
     handleGetProfile,
     handleUpdateProfile,
@@ -229,6 +230,8 @@ export default function ProfilePage() {
                             </div>
                         </div>
                     </section>
+
+                    <MfaSettings />
 
                     <section className="rounded-xl border border-border bg-white p-5">
                         <div className="flex items-center justify-between">

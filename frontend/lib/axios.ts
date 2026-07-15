@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getAuthToken } from "./cookie";
+import { getAuthToken, getMfaPendingToken } from "./cookie";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
@@ -14,9 +14,18 @@ const axiosInstance = axios.create(
 
 axiosInstance.interceptors.request.use(
     async (config) => {
+        // Forward whichever cookies we hold. During the MFA step the user has no
+        // session token yet, only the short-lived pending one.
+        const parts: string[] = [];
+
         const token = await getAuthToken();
-        if (token && config.headers) {
-            config.headers["Cookie"] = `token=${token}`;
+        if (token) parts.push(`token=${token}`);
+
+        const pending = await getMfaPendingToken();
+        if (pending) parts.push(`mfa_pending=${pending}`);
+
+        if (parts.length > 0 && config.headers) {
+            config.headers["Cookie"] = parts.join("; ");
         }
         return config;
     },

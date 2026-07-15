@@ -4,6 +4,14 @@ export const API = {
     LOGIN: "/api/auth/login",
     LOGOUT: "/api/auth/logout",
     ME: "/api/auth/me",
+    MFA: {
+      STATUS: "/api/auth/mfa/status",
+      SETUP: "/api/auth/mfa/setup",
+      ENABLE: "/api/auth/mfa/enable",
+      DISABLE: "/api/auth/mfa/disable",
+      VERIFY: "/api/auth/mfa/verify",
+      BACKUP: "/api/auth/mfa/backup",
+    },
   },
   PRODUCT: {
     GET_ALL: (
