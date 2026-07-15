@@ -12,6 +12,12 @@ export interface AuthedUser extends PublicUser {
   tokenVersion: number;
 }
 
+export interface LoginResult {
+  user: AuthedUser;
+  /** True when the password was correct but a second factor is still required. */
+  mfaRequired: boolean;
+}
+
 export async function register(input: RegisterDto): Promise<AuthedUser> {
   const existing = await userRepository.findByEmail(input.email);
   if (existing) {
@@ -28,7 +34,7 @@ export async function register(input: RegisterDto): Promise<AuthedUser> {
   return { ...toPublicUser(user), tokenVersion: user.tokenVersion };
 }
 
-export async function login(input: LoginDto): Promise<AuthedUser> {
+export async function login(input: LoginDto): Promise<LoginResult> {
   const user = await userRepository.findByEmail(input.email);
   if (!user) {
     // Same generic error as a bad password, so this can't be used to
@@ -57,6 +63,18 @@ export async function login(input: LoginDto): Promise<AuthedUser> {
     await userRepository.clearFailedLogins(user.id);
   }
 
+  return {
+    user: { ...toPublicUser(user), tokenVersion: user.tokenVersion },
+    mfaRequired: user.mfaEnabled,
+  };
+}
+
+/** Completes login after the second factor has been proven. */
+export async function issueSessionFor(userId: string): Promise<AuthedUser> {
+  const user = await userRepository.findById(userId);
+  if (!user) {
+    throw new AppError(404, 'User not found');
+  }
   return { ...toPublicUser(user), tokenVersion: user.tokenVersion };
 }
 

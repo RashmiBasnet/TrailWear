@@ -23,6 +23,12 @@ model User {
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
 
+  // Multi-factor authentication (TOTP, RFC 6238).
+  mfaEnabled     Boolean  @default(false)
+  mfaSecret      String? // AES-256-GCM encrypted; never stored in plaintext
+  mfaBackupCodes String[] @default([]) // argon2 hashes, single use
+  mfaLastUsedStep Int? // last accepted time step, blocks code replay
+
   cart      Cart?
   wishlist  WishlistItem[]
   orders    Order[]

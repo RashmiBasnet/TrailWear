@@ -41,3 +41,38 @@ export function clearFailedLogins(id: string) {
     data: { failedLoginAttempts: 0, lockedUntil: null },
   });
 }
+
+export function setMfaSecret(id: string, encryptedSecret: string) {
+  return prisma.user.update({
+    where: { id },
+    data: { mfaSecret: encryptedSecret },
+  });
+}
+
+export function enableMfa(id: string, backupCodeHashes: string[], step: number) {
+  return prisma.user.update({
+    where: { id },
+    data: { mfaEnabled: true, mfaBackupCodes: backupCodeHashes, mfaLastUsedStep: step },
+  });
+}
+
+export function disableMfa(id: string) {
+  return prisma.user.update({
+    where: { id },
+    data: { mfaEnabled: false, mfaSecret: null, mfaBackupCodes: [], mfaLastUsedStep: null },
+  });
+}
+
+export function setMfaLastUsedStep(id: string, step: number) {
+  return prisma.user.update({
+    where: { id },
+    data: { mfaLastUsedStep: step },
+  });
+}
+
+export function setBackupCodes(id: string, backupCodeHashes: string[]) {
+  return prisma.user.update({
+    where: { id },
+    data: { mfaBackupCodes: backupCodeHashes },
+  });
+}

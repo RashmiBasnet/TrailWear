@@ -28,6 +28,19 @@ export const authLimiter = rateLimit({
   message: message('Too many login attempts. Please try again in 15 minutes.'),
 });
 
+/**
+ * MFA codes are only 6 digits (1,000,000 combinations), which is well within
+ * reach of a script without a hard cap on attempts.
+ */
+export const mfaLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: message('Too many authentication attempts. Please try again in 15 minutes.'),
+});
+
 /** Order placement and payment verification are expensive and side-effectful. */
 export const orderLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

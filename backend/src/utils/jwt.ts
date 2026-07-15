@@ -3,6 +3,14 @@ import type { Response } from 'express';
 import { env } from '../config/env';
 import type { Role } from '../types/user.types';
 
+/**
+ * Every token carries a `typ` claim and every verifier checks it. Without this,
+ * the short-lived MFA-pending token — signed with the same secret — could simply
+ * be replayed as the session cookie and skip the second factor entirely.
+ */
+const TOKEN_TYPE_SESSION = 'session';
+const TOKEN_TYPE_MFA_PENDING = 'mfa_pending';
+
 export interface AuthTokenPayload {
   id: string;
   email: string;
@@ -10,7 +18,16 @@ export interface AuthTokenPayload {
   tokenVersion: number;
 }
 
+export interface MfaPendingPayload {
+  id: string;
+}
+
 const COOKIE_NAME = 'token';
+const MFA_COOKIE_NAME = 'mfa_pending';
+
+/** Window to finish the second step. Short, because the password is already accepted. */
+const MFA_PENDING_EXPIRES_IN = '5m';
+const MFA_PENDING_MAX_AGE_MS = 5 * 60 * 1000;
 
 /**
  * Converts a jsonwebtoken-style duration ('30d', '12h', '900') to milliseconds.
@@ -28,30 +45,55 @@ function durationToMs(value: string): number {
 
 const COOKIE_MAX_AGE_MS = durationToMs(env.JWT_EXPIRES_IN);
 
+const baseCookieOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === 'production',
+  sameSite: 'strict',
+} as const;
+
 export function signToken(payload: AuthTokenPayload): string {
-  return jwt.sign(payload, env.JWT_SECRET, {
+  return jwt.sign({ ...payload, typ: TOKEN_TYPE_SESSION }, env.JWT_SECRET, {
     expiresIn: env.JWT_EXPIRES_IN,
   } as jwt.SignOptions);
 }
 
 export function verifyToken(token: string): AuthTokenPayload {
-  const decoded = jwt.verify(token, env.JWT_SECRET);
-  return decoded as AuthTokenPayload;
+  const decoded = jwt.verify(token, env.JWT_SECRET) as AuthTokenPayload & { typ?: string };
+  if (decoded.typ !== TOKEN_TYPE_SESSION) {
+    throw new Error('Wrong token type');
+  }
+  return decoded;
+}
+
+/** Issued once the password checks out but before the second factor is proven. */
+export function signMfaPendingToken(payload: MfaPendingPayload): string {
+  return jwt.sign({ ...payload, typ: TOKEN_TYPE_MFA_PENDING }, env.JWT_SECRET, {
+    expiresIn: MFA_PENDING_EXPIRES_IN,
+  } as jwt.SignOptions);
+}
+
+export function verifyMfaPendingToken(token: string): MfaPendingPayload {
+  const decoded = jwt.verify(token, env.JWT_SECRET) as MfaPendingPayload & { typ?: string };
+  if (decoded.typ !== TOKEN_TYPE_MFA_PENDING) {
+    throw new Error('Wrong token type');
+  }
+  return decoded;
 }
 
 export function setAuthCookie(res: Response, token: string): void {
-  res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: COOKIE_MAX_AGE_MS,
-  });
+  res.cookie(COOKIE_NAME, token, { ...baseCookieOptions, maxAge: COOKIE_MAX_AGE_MS });
 }
 
 export function clearAuthCookie(res: Response): void {
-  res.clearCookie(COOKIE_NAME, {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'strict',
-  });
+  res.clearCookie(COOKIE_NAME, baseCookieOptions);
 }
+
+export function setMfaPendingCookie(res: Response, token: string): void {
+  res.cookie(MFA_COOKIE_NAME, token, { ...baseCookieOptions, maxAge: MFA_PENDING_MAX_AGE_MS });
+}
+
+export function clearMfaPendingCookie(res: Response): void {
+  res.clearCookie(MFA_COOKIE_NAME, baseCookieOptions);
+}
+
+export const MFA_PENDING_COOKIE = MFA_COOKIE_NAME;

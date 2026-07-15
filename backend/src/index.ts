@@ -8,6 +8,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimit';
 import { UPLOAD_DIR } from './middleware/upload';
 import authRoutes from './routes/auth.routes';
+import mfaRoutes from './routes/mfa.routes';
 import productRoutes from './routes/product.routes';
 import categoryRoutes from './routes/category.routes';
 import cartRoutes from './routes/cart.routes';
@@ -24,7 +25,6 @@ app.set('trust proxy', 1);
 
 app.use(
   helmet({
-    // This API serves JSON and images, never HTML, so lock scripting down hard.
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'none'"],
@@ -32,7 +32,6 @@ app.use(
         frameAncestors: ["'none'"],
       },
     },
-    // Images are fetched cross-origin by the Next.js frontend.
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
@@ -49,8 +48,6 @@ app.use(
     index: false,
     dotfiles: 'deny',
     setHeaders: (res) => {
-      // Defence in depth: even if a non-image slipped through validation, the
-      // browser must not sniff it into HTML or execute anything inside it.
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
     },
@@ -58,6 +55,7 @@ app.use(
 );
 
 app.use('/api/auth', authRoutes);
+app.use('/api/auth/mfa', mfaRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);

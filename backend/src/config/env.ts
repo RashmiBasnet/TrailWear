@@ -8,11 +8,14 @@ const envSchema = z.object({
     .string()
     .regex(/^\d+\s*[smhd]?$/, "JWT_EXPIRES_IN must look like '30d', '12h' or '900'")
     .default('30d'),
+  // 32-byte key (64 hex chars) used to encrypt MFA secrets at rest.
+  // Generate with: openssl rand -hex 32
+  MFA_ENCRYPTION_KEY: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/, 'MFA_ENCRYPTION_KEY must be 64 hex characters (32 bytes)'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(5000),
   CLIENT_URL: z.string().url().default('http://localhost:5173'),
-  // Defaults are eSewa's public sandbox test credentials — swap for your live
-  // merchant values in production.
   ESEWA_SECRET_KEY: z.string().default('8gBm/:&EnhH.1/q'),
   ESEWA_PRODUCT_CODE: z.string().default('EPAYTEST'),
   ESEWA_FORM_URL: z
@@ -28,8 +31,6 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  // Intentionally console, not winston: the logger depends on this module, so
-  // it cannot exist yet when env validation fails.
   console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors);
   process.exit(1);
 }
