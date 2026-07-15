@@ -7,10 +7,26 @@ export interface AuthTokenPayload {
   id: string;
   email: string;
   role: Role;
+  tokenVersion: number;
 }
 
 const COOKIE_NAME = 'token';
-const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Converts a jsonwebtoken-style duration ('30d', '12h', '900') to milliseconds.
+ * The cookie lifetime is derived from JWT_EXPIRES_IN rather than hardcoded, so
+ * the cookie and the token it carries can never expire at different times.
+ */
+function durationToMs(value: string): number {
+  const match = /^(\d+)\s*([smhd])?$/.exec(value.trim());
+  if (!match) {
+    throw new Error(`Invalid JWT_EXPIRES_IN: ${value}`);
+  }
+  const factors: Record<string, number> = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+  return Number(match[1]) * factors[match[2] ?? 's'];
+}
+
+const COOKIE_MAX_AGE_MS = durationToMs(env.JWT_EXPIRES_IN);
 
 export function signToken(payload: AuthTokenPayload): string {
   return jwt.sign(payload, env.JWT_SECRET, {
