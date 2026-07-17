@@ -1,33 +1,69 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import ReCAPTCHA from "react-google-recaptcha";
 import { AlertCircle, ArrowLeft, Eye, EyeOff, Lock, Mail, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import GoogleButton from "@/app/_components/GoogleButton";
 
+// Google's public test key: renders a widget that always passes. Replace via
+// NEXT_PUBLIC_RECAPTCHA_SITE_KEY with a real key from google.com/recaptcha/admin
+const RECAPTCHA_SITE_KEY =
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
+
+/**
+ * useSearchParams opts the tree out of prerendering, and Next refuses to build
+ * without a boundary to fall back to. The form itself is the boundary's child so
+ * only it waits on the URL, rather than the whole route.
+ */
 export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="w-full max-w-md" />}>
+            <LoginForm />
+        </Suspense>
+    );
+}
+
+function LoginForm() {
     const { user, loading, login, verifyMfa, verifyMfaBackupCode } = useAuth();
     const toast = useToast();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [redirecting, setRedirecting] = useState(false);
-    const [error, setError] = useState("");
 
-    // Second factor step
-    const [mfaRequired, setMfaRequired] = useState(false);
+    // Google sign-in comes back as a redirect, so its outcome arrives in the URL
+    // rather than as a return value: an error to show, or the second-factor step
+    // to resume with the pending cookie already set.
+    const [error, setError] = useState(searchParams.get("error") ?? "");
+    const [mfaRequired, setMfaRequired] = useState(searchParams.get("mfa") === "required");
+
     const [mfaCode, setMfaCode] = useState("");
     const [useBackupCode, setUseBackupCode] = useState(false);
+
+    // Required on every attempt; the server rejects a login without a valid token.
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const captchaRef = useRef<ReCAPTCHA>(null);
 
     useEffect(() => {
         if (loading || !user || redirecting) return;
         router.replace(user.role === "ADMIN" ? "/admin" : "/");
     }, [user, loading, redirecting, router]);
+
+    // Those params have been read into state above; drop them so a refresh does
+    // not resurrect a stale error or an MFA step whose pending token has expired.
+    useEffect(() => {
+        if (searchParams.get("error") || searchParams.get("mfa")) {
+            router.replace("/login");
+        }
+    }, [searchParams, router]);
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -39,11 +75,20 @@ export default function LoginPage() {
             return;
         }
 
+        if (!captchaToken) {
+            setError("Please complete the captcha below.");
+            return;
+        }
+
         setSubmitting(true);
-        const result = await login({ email: email.trim(), password });
+        const result = await login({ email: email.trim(), password, captchaToken });
         setSubmitting(false);
 
         if (!result.success) {
+            // Google tokens are single use, so a fresh one is needed either way.
+            captchaRef.current?.reset();
+            setCaptchaToken(null);
+
             const message = result.message || "Login failed.";
             setError(message);
             toast.error("Login failed", message);
@@ -190,7 +235,17 @@ export default function LoginPage() {
                 Log in to your account to keep exploring.
             </p>
 
-            <form onSubmit={onSubmit} className="mt-8 space-y-5">
+            <div className="mt-8">
+                <GoogleButton />
+            </div>
+
+            <div className="my-6 flex items-center gap-4">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium uppercase tracking-wide text-navy-300">or</span>
+                <span className="h-px flex-1 bg-border" />
+            </div>
+
+            <form onSubmit={onSubmit} className="space-y-5">
                 {error && (
                     <p className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
                         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -242,14 +297,29 @@ export default function LoginPage() {
                     </div>
                 </div>
 
+                <ReCAPTCHA
+                    ref={captchaRef}
+                    sitekey={RECAPTCHA_SITE_KEY}
+                    onChange={(token) => setCaptchaToken(token)}
+                    onExpired={() => setCaptchaToken(null)}
+                />
+
                 <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || !captchaToken}
                     className="w-full rounded-full bg-navy-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-navy-700 disabled:opacity-60"
                 >
                     {submitting ? "Logging in…" : "Log in"}
                 </button>
             </form>
+
+            {/* Shown to everyone, always. A Google-only account gets the same generic
+                "invalid email or password" as any other failure — telling that user
+                specifically to use Google would also tell an attacker which emails
+                have accounts. A standing hint helps them and reveals nothing. */}
+            <p className="mt-6 text-center text-xs text-navy-300">
+                Signed up with Google? Use the button above rather than a password.
+            </p>
 
             <p className="mt-8 text-center text-sm text-navy-400">
                 New to TrailWear?{" "}

@@ -1,5 +1,6 @@
 import axios from "./axios";
 import { API } from "./endpoints";
+import { setAuthToken } from "./cookie";
 
 export const getProfile = async () => {
     try {
@@ -42,6 +43,43 @@ export const addAddress = async (addressData: any) => {
             err.response?.data?.message
             || err.message
             || "Failed to add address"
+        );
+    }
+}
+
+export const getPasswordStatus = async () => {
+    try {
+        const response = await axios.get(API.PROFILE.PASSWORD_STATUS);
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Failed to fetch password status"
+        );
+    }
+}
+
+export const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+        const response = await axios.post(API.PROFILE.CHANGE_PASSWORD, { currentPassword, newPassword });
+
+        // Changing the password invalidates every existing token, so the backend
+        // issues a replacement for this session. Without storing it, the user
+        // would be signed out the moment they changed their password.
+        const cookie = (response.headers["set-cookie"] as string[] | undefined)
+            ?.find((c) => c.startsWith("token="));
+        const token = cookie?.split(";")[0].slice("token=".length);
+        if (token) {
+            await setAuthToken(token);
+        }
+
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Failed to change password"
         );
     }
 }

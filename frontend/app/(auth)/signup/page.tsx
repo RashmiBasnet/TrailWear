@@ -1,31 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Eye, EyeOff, Lock, Mail, User, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import PasswordStrengthMeter, {
+    MINIMUM_SCORE,
+    scorePassword,
+} from "@/app/_components/PasswordStrengthMeter";
+import GoogleButton from "@/app/_components/GoogleButton";
 
+// Mirrors the regex rules the backend enforces, shown as a live checklist.
+// Meeting these is necessary but not sufficient — the zxcvbn score decides.
 const PASSWORD_REQUIREMENTS = [
     { key: "length", label: "At least 8 characters", test: (pw: string) => pw.length >= 8 },
     { key: "case", label: "Upper & lowercase letters", test: (pw: string) => /[a-z]/.test(pw) && /[A-Z]/.test(pw) },
     { key: "number", label: "At least one number", test: (pw: string) => /\d/.test(pw) },
-    { key: "special", label: "At least one special character", test: (pw: string) => /[^A-Za-z0-9]/.test(pw) },
 ];
-
-const STRENGTH_LEVELS = [
-    { label: "Weak", barColor: "bg-danger", textColor: "text-danger" },
-    { label: "Fair", barColor: "bg-gold-500", textColor: "text-gold-600" },
-    { label: "Good", barColor: "bg-gold-400", textColor: "text-gold-700" },
-    { label: "Strong", barColor: "bg-success", textColor: "text-success" },
-];
-
-function getPasswordStrength(password: string) {
-    const metCount = PASSWORD_REQUIREMENTS.filter((req) => req.test(password)).length;
-    const level = STRENGTH_LEVELS[Math.max(metCount - 1, 0)];
-    return { score: metCount, isStrong: metCount === PASSWORD_REQUIREMENTS.length, ...level };
-}
 
 export default function SignupPage() {
     const { user, loading, register } = useAuth();
@@ -42,7 +35,13 @@ export default function SignupPage() {
     const [redirecting, setRedirecting] = useState(false);
     const [error, setError] = useState("");
 
-    const strength = getPasswordStrength(password);
+    const userInputs = useMemo(() => [name, email, "trailwear"], [name, email]);
+    const strengthScore = useMemo(
+        () => scorePassword(password, userInputs)?.score ?? 0,
+        [password, userInputs]
+    );
+    const meetsRules = PASSWORD_REQUIREMENTS.every((req) => req.test(password));
+    const isStrong = meetsRules && strengthScore >= MINIMUM_SCORE;
 
     useEffect(() => {
         if (loading || !user || redirecting) return;
@@ -58,9 +57,9 @@ export default function SignupPage() {
             toast.error("Missing signup details", "Please fill in all fields.");
             return;
         }
-        if (!strength.isStrong) {
-            setError("Password must meet all the strength requirements below.");
-            toast.error("Password is too weak", "Please meet all password requirements.");
+        if (!isStrong) {
+            setError("Please choose a stronger password — see the guidance below.");
+            toast.error("Password is too weak", "Choose a longer or less predictable password.");
             return;
         }
         if (password !== confirmPassword) {
@@ -92,7 +91,19 @@ export default function SignupPage() {
                 Join TrailWear and gear up for the trail.
             </p>
 
-            <form onSubmit={onSubmit} className="mt-8 space-y-5">
+            {/* Same endpoint as on the login page: Google sign-in creates the account
+                if there is none, so there is nothing separate to "sign up" with. */}
+            <div className="mt-8">
+                <GoogleButton label="Sign up with Google" />
+            </div>
+
+            <div className="my-6 flex items-center gap-4">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium uppercase tracking-wide text-navy-300">or</span>
+                <span className="h-px flex-1 bg-border" />
+            </div>
+
+            <form onSubmit={onSubmit} className="space-y-5">
                 {error && (
                     <p className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
                         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -160,18 +171,7 @@ export default function SignupPage() {
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                     </div>
-                    {password && (
-                        <div className="mt-2 flex gap-1">
-                            {STRENGTH_LEVELS.map((level, i) => (
-                                <span
-                                    key={level.label}
-                                    className={`h-1.5 flex-1 rounded-full transition-colors ${
-                                        i < strength.score ? strength.barColor : "bg-navy-100"
-                                    }`}
-                                />
-                            ))}
-                        </div>
-                    )}
+                    <PasswordStrengthMeter password={password} userInputs={userInputs} />
                     <ul className="mt-2 space-y-1">
                         {PASSWORD_REQUIREMENTS.map((req) => {
                             const met = req.test(password);

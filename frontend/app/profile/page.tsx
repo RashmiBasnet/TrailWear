@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import MfaSettings from "@/app/_components/MfaSettings";
+import ChangePassword from "@/app/_components/ChangePassword";
 import {
     handleGetProfile,
     handleUpdateProfile,
@@ -230,6 +231,8 @@ export default function ProfilePage() {
                             </div>
                         </div>
                     </section>
+
+                    <ChangePassword />
 
                     <MfaSettings />
 

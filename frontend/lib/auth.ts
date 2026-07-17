@@ -5,6 +5,8 @@ import {
     clearAuthToken,
     setMfaPendingToken,
     clearMfaPendingToken,
+    setOAuthStateToken,
+    clearOAuthStateToken,
 } from "./cookie";
 
 const extractCookie = (setCookieHeader: string[] | undefined, name: string) => {
@@ -63,6 +65,64 @@ export const loginUser = async (loginData: any) => {
             err.response?.data?.message
             || err.message
             || "Login Failed"
+        );
+    }
+}
+
+/**
+ * Starts Google sign-in: returns the consent screen URL to send the browser to,
+ * and stores the state the callback will be checked against.
+ */
+export const startGoogleLogin = async () => {
+    try {
+        const response = await axios.get(API.AUTH.GOOGLE.START);
+
+        const state = extractCookie(response.headers["set-cookie"], "oauth_state");
+        if (state) {
+            await setOAuthStateToken(state);
+        }
+
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Could not start Google sign-in"
+        );
+    }
+}
+
+/**
+ * Finishes Google sign-in by handing the authorization code to the backend,
+ * which exchanges it and replies with the same cookies password login does.
+ */
+export const completeGoogleLogin = async (code: string, state: string) => {
+    try {
+        const response = await axios.post(API.AUTH.GOOGLE.CALLBACK, { code, state });
+        const setCookie = response.headers["set-cookie"];
+
+        // As with password login, an account with MFA gets a pending token here
+        // rather than a session; only /mfa/verify can redeem it.
+        const token = extractToken(setCookie);
+        if (token) {
+            await setAuthToken(token);
+        }
+
+        const pending = extractCookie(setCookie, "mfa_pending");
+        if (pending) {
+            await setMfaPendingToken(pending);
+        }
+
+        await clearOAuthStateToken();
+        return response.data;
+    } catch (err: Error | any) {
+        // The state is single use on the backend, so it must not linger here
+        // either — a stale one would only fail the next attempt.
+        await clearOAuthStateToken();
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Google sign-in failed"
         );
     }
 }

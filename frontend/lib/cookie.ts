@@ -52,3 +52,34 @@ export const clearMfaPendingToken = async () => {
     const cookieStore = await cookies();
     cookieStore.delete("mfa_pending");
 }
+
+// Long enough to pick an account on Google's screen; mirrors the backend's state token.
+const OAUTH_STATE_MAX_AGE = 10 * 60;
+
+/**
+ * Unlike the session cookies this is "lax", not "strict", and has to be: Google
+ * returns the user by a top-level navigation from accounts.google.com, and a
+ * strict cookie is withheld on cross-site navigations. Strict here would mean
+ * the state cookie is missing on every callback and no sign-in ever completes.
+ */
+export const setOAuthStateToken = async (token: string) => {
+    const cookieStore = await cookies();
+    cookieStore.set({
+        ...baseCookie,
+        sameSite: "lax",
+        name: "oauth_state",
+        value: token,
+        maxAge: OAUTH_STATE_MAX_AGE,
+    });
+}
+
+export const getOAuthStateToken = async () => {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("oauth_state")?.value;
+    return token || null;
+}
+
+export const clearOAuthStateToken = async () => {
+    const cookieStore = await cookies();
+    cookieStore.delete("oauth_state");
+}

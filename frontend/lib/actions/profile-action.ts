@@ -1,6 +1,39 @@
 "use server";
 
-import { getProfile, updateProfile, addAddress, getAddresses } from "../profile";
+import {
+    getProfile,
+    updateProfile,
+    addAddress,
+    getAddresses,
+    getPasswordStatus,
+    changePassword,
+} from "../profile";
+
+export const handleGetPasswordStatus = async () => {
+    try {
+        const result = await getPasswordStatus();
+        if (result.success) {
+            return { success: true, data: result.data, message: "Status fetched" };
+        }
+        return { success: false, message: result.message || "Failed to fetch password status" };
+    } catch (err: Error | any) {
+        console.log("HANDLE PASSWORD STATUS ERROR:", err.message);
+        return { success: false, message: err.message || "Failed to fetch password status" };
+    }
+}
+
+export const handleChangePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+        const result = await changePassword(currentPassword, newPassword);
+        if (result.success) {
+            return { success: true, message: result.message || "Password updated" };
+        }
+        return { success: false, message: result.message || "Failed to change password" };
+    } catch (err: Error | any) {
+        console.log("HANDLE CHANGE PASSWORD ERROR:", err.message);
+        return { success: false, message: err.message || "Failed to change password" };
+    }
+}
 
 export const handleGetProfile = async () => {
     try {

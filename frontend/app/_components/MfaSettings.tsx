@@ -9,6 +9,7 @@ import {
     handleEnableMfa,
     handleDisableMfa,
 } from "@/lib/actions/mfa-action";
+import { handleGetPasswordStatus } from "@/lib/actions/profile-action";
 
 const inputClass =
     "w-full rounded-lg border border-border bg-white px-3.5 py-2 text-sm text-navy-800 placeholder:text-navy-300 focus:border-navy-400 focus:outline-none";
@@ -32,11 +33,22 @@ export default function MfaSettings() {
     const [disablePassword, setDisablePassword] = useState("");
     const [disableCode, setDisableCode] = useState("");
 
+    // A Google-only account has no password, so turning MFA off cannot ask for
+    // one — the code alone has to stand.
+    const [hasPassword, setHasPassword] = useState(true);
+
     const load = async () => {
-        const result = await handleGetMfaStatus();
+        const [result, passwordStatus] = await Promise.all([
+            handleGetMfaStatus(),
+            handleGetPasswordStatus(),
+        ]);
+
         if (result.success) {
             setEnabled(result.data.enabled);
             setBackupCodesLeft(result.data.backupCodesLeft);
+        }
+        if (passwordStatus.success) {
+            setHasPassword(passwordStatus.data.hasPassword !== false);
         }
         setLoading(false);
     };
@@ -186,16 +198,20 @@ export default function MfaSettings() {
                     {showDisable ? (
                         <form onSubmit={onDisable} className="mt-4 space-y-3 border-t border-border pt-4">
                             <p className="text-sm text-navy-600">
-                                Confirm your password and a current code to turn this off.
+                                {hasPassword
+                                    ? "Confirm your password and a current code to turn this off."
+                                    : "Enter a current code to turn this off."}
                             </p>
-                            <input
-                                type="password"
-                                value={disablePassword}
-                                onChange={(e) => setDisablePassword(e.target.value)}
-                                placeholder="Your password"
-                                autoComplete="current-password"
-                                className={inputClass}
-                            />
+                            {hasPassword && (
+                                <input
+                                    type="password"
+                                    value={disablePassword}
+                                    onChange={(e) => setDisablePassword(e.target.value)}
+                                    placeholder="Your password"
+                                    autoComplete="current-password"
+                                    className={inputClass}
+                                />
+                            )}
                             <input
                                 type="text"
                                 value={disableCode}

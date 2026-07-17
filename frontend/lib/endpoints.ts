@@ -4,6 +4,10 @@ export const API = {
     LOGIN: "/api/auth/login",
     LOGOUT: "/api/auth/logout",
     ME: "/api/auth/me",
+    GOOGLE: {
+      START: "/api/auth/google/start",
+      CALLBACK: "/api/auth/google/callback",
+    },
     MFA: {
       STATUS: "/api/auth/mfa/status",
       SETUP: "/api/auth/mfa/setup",
@@ -57,6 +61,8 @@ export const API = {
   PROFILE: {
     GET: "/api/profile",
     UPDATE: "/api/profile",
+    PASSWORD_STATUS: "/api/profile/password",
+    CHANGE_PASSWORD: "/api/profile/password",
     ADD_ADDRESS: "/api/profile/address",
     GET_ADDRESSES: "/api/profile/address",
   },
