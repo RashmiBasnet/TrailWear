@@ -4,10 +4,11 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReCAPTCHA from "react-google-recaptcha";
-import { AlertCircle, ArrowLeft, Eye, EyeOff, Lock, Mail, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowLeft, Eye, EyeOff, Lock, Mail, MailCheck, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import GoogleButton from "@/app/_components/GoogleButton";
+import { handleResendVerification } from "@/lib/actions/auth-action";
 
 // Google's public test key: renders a widget that always passes. Replace via
 // NEXT_PUBLIC_RECAPTCHA_SITE_KEY with a real key from google.com/recaptcha/admin
@@ -48,6 +49,10 @@ function LoginForm() {
     const [mfaCode, setMfaCode] = useState("");
     const [useBackupCode, setUseBackupCode] = useState(false);
 
+    // Password accepted but the email was never verified.
+    const [needsVerification, setNeedsVerification] = useState(false);
+    const [resending, setResending] = useState(false);
+
     // Required on every attempt; the server rejects a login without a valid token.
     const [captchaToken, setCaptchaToken] = useState<string | null>(null);
     const captchaRef = useRef<ReCAPTCHA>(null);
@@ -68,6 +73,7 @@ function LoginForm() {
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
+        setNeedsVerification(false);
 
         if (!email.trim() || !password) {
             setError("Please enter your email and password.");
@@ -91,6 +97,15 @@ function LoginForm() {
 
             const message = result.message || "Login failed.";
             setError(message);
+
+            // Password was right, the address just isn't proven yet. Offer a
+            // re-send rather than leaving them stuck on an error.
+            if (result.emailVerificationRequired) {
+                setNeedsVerification(true);
+                toast.info("Verify your email", message);
+                return;
+            }
+
             toast.error("Login failed", message);
             return;
         }
@@ -103,6 +118,13 @@ function LoginForm() {
         }
 
         finishLogin(result.data?.user?.role);
+    };
+
+    const onResend = async () => {
+        setResending(true);
+        const result = await handleResendVerification(email.trim());
+        setResending(false);
+        toast.success("Check your inbox", result.message);
     };
 
     const finishLogin = (role?: string) => {
@@ -235,22 +257,29 @@ function LoginForm() {
                 Log in to your account to keep exploring.
             </p>
 
-            <div className="mt-8">
-                <GoogleButton />
-            </div>
-
-            <div className="my-6 flex items-center gap-4">
-                <span className="h-px flex-1 bg-border" />
-                <span className="text-xs font-medium uppercase tracking-wide text-navy-300">or</span>
-                <span className="h-px flex-1 bg-border" />
-            </div>
-
-            <form onSubmit={onSubmit} className="space-y-5">
-                {error && (
+            <form onSubmit={onSubmit} className="mt-8 space-y-5">
+                {error && !needsVerification && (
                     <p className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
                         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                         {error}
                     </p>
+                )}
+
+                {needsVerification && (
+                    <div className="rounded-xl border border-gold-300 bg-gold-50 px-4 py-3">
+                        <p className="flex items-start gap-2 text-sm text-gold-800">
+                            <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                            {error}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={onResend}
+                            disabled={resending}
+                            className="mt-2 text-sm font-semibold text-navy-700 underline hover:text-navy-900 disabled:opacity-60"
+                        >
+                            {resending ? "Sending…" : "Send me a new link"}
+                        </button>
+                    </div>
                 )}
 
                 <div>
@@ -312,6 +341,14 @@ function LoginForm() {
                     {submitting ? "Logging in…" : "Log in"}
                 </button>
             </form>
+
+            <div className="my-6 flex items-center gap-4">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium uppercase tracking-wide text-navy-300">or</span>
+                <span className="h-px flex-1 bg-border" />
+            </div>
+
+            <GoogleButton />
 
             {/* Shown to everyone, always. A Google-only account gets the same generic
                 "invalid email or password" as any other failure — telling that user

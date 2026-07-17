@@ -1,6 +1,13 @@
 "use server";
 
-import { registerUser, loginUser, logoutUser, getMe } from "../auth";
+import {
+    registerUser,
+    loginUser,
+    logoutUser,
+    getMe,
+    verifyEmail,
+    resendVerification,
+} from "../auth";
 
 export const handleRegister = async (formData: any) => {
     try {
@@ -43,7 +50,40 @@ export const handleLogin = async (formData: any) => {
         console.log("HANDLE LOGIN ERROR:", err.message);
         return {
             success: false,
-            message: err.message || "Login Failed"
+            message: err.message || "Login Failed",
+            emailVerificationRequired: err.emailVerificationRequired === true
+        };
+    }
+}
+
+export const handleVerifyEmail = async (token: string) => {
+    try {
+        const result = await verifyEmail(token);
+        return {
+            success: true,
+            message: result.message || "Email verified"
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE VERIFY EMAIL ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Verification failed"
+        };
+    }
+}
+
+export const handleResendVerification = async (email: string) => {
+    try {
+        const result = await resendVerification(email);
+        return {
+            success: true,
+            message: result.message || "Verification email sent"
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE RESEND VERIFICATION ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Could not resend the verification email"
         };
     }
 }

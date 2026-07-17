@@ -4,6 +4,8 @@ export const API = {
     LOGIN: "/api/auth/login",
     LOGOUT: "/api/auth/logout",
     ME: "/api/auth/me",
+    VERIFY_EMAIL: "/api/auth/verify-email",
+    RESEND_VERIFICATION: "/api/auth/resend-verification",
     GOOGLE: {
       START: "/api/auth/google/start",
       CALLBACK: "/api/auth/google/callback",

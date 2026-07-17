@@ -61,10 +61,41 @@ export const loginUser = async (loginData: any) => {
 
         return response.data;
     } catch (err: Error | any) {
-        throw new Error(
+        const error: any = new Error(
             err.response?.data?.message
             || err.message
             || "Login Failed"
+        );
+        // Carried through so the login page can offer a re-send rather than a
+        // dead end. The backend only sends this once the password is accepted.
+        error.emailVerificationRequired =
+            err.response?.data?.data?.emailVerificationRequired === true;
+        throw error;
+    }
+}
+
+export const verifyEmail = async (token: string) => {
+    try {
+        const response = await axios.post(API.AUTH.VERIFY_EMAIL, { token });
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Verification failed"
+        );
+    }
+}
+
+export const resendVerification = async (email: string) => {
+    try {
+        const response = await axios.post(API.AUTH.RESEND_VERIFICATION, { email });
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Could not resend the verification email"
         );
     }
 }

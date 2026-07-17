@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Check, Eye, EyeOff, Lock, Mail, User, X } from "lucide-react";
+import { AlertCircle, Check, Eye, EyeOff, Lock, Mail, MailCheck, User, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { handleResendVerification } from "@/lib/actions/auth-action";
 import PasswordStrengthMeter, {
     MINIMUM_SCORE,
     scorePassword,
@@ -34,6 +35,10 @@ export default function SignupPage() {
     const [submitting, setSubmitting] = useState(false);
     const [redirecting, setRedirecting] = useState(false);
     const [error, setError] = useState("");
+
+    // Set once registration succeeds and a verification link has been sent.
+    const [sentTo, setSentTo] = useState("");
+    const [resending, setResending] = useState(false);
 
     const userInputs = useMemo(() => [name, email, "trailwear"], [name, email]);
     const strengthScore = useMemo(
@@ -73,6 +78,13 @@ export default function SignupPage() {
         setSubmitting(false);
 
         if (result.success) {
+            // No session yet: the address has to be proven first. Redirecting to
+            // the app would only bounce them straight back to login.
+            if (result.data?.emailVerificationRequired) {
+                setSentTo(email.trim());
+                return;
+            }
+
             const role = result.data?.user?.role;
             setRedirecting(true);
             toast.success("Account created", "Welcome to TrailWear.");
@@ -84,6 +96,52 @@ export default function SignupPage() {
         }
     };
 
+    const onResend = async () => {
+        setResending(true);
+        const result = await handleResendVerification(sentTo);
+        setResending(false);
+        // Deliberately the same message either way — the backend never says
+        // whether an address is registered, and neither should this.
+        toast.success("Check your inbox", result.message);
+    };
+
+    if (sentTo) {
+        return (
+            <div className="w-full max-w-md">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-navy-50">
+                    <MailCheck className="h-6 w-6 text-navy-600" />
+                </span>
+                <h1 className="mt-4 text-3xl font-bold tracking-tight text-navy-800">
+                    Check your email
+                </h1>
+                <p className="mt-2 text-sm text-navy-400">
+                    We sent a verification link to{" "}
+                    <span className="font-medium text-navy-700">{sentTo}</span>. Open it to
+                    finish setting up your account — you&apos;ll need to verify before you can log in.
+                </p>
+                <p className="mt-4 text-xs text-navy-300">
+                    The link expires in 24 hours and can only be used once. If it hasn&apos;t
+                    arrived in a minute or two, check your spam folder.
+                </p>
+
+                <button
+                    type="button"
+                    onClick={onResend}
+                    disabled={resending}
+                    className="mt-8 w-full rounded-full border border-border bg-white px-6 py-3 text-sm font-semibold text-navy-800 transition hover:bg-navy-50 disabled:opacity-60"
+                >
+                    {resending ? "Sending…" : "Resend the link"}
+                </button>
+
+                <p className="mt-8 text-center text-sm text-navy-400">
+                    <Link href="/login" className="font-semibold text-navy-700 hover:text-navy-900 hover:underline">
+                        Back to login
+                    </Link>
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full max-w-md">
             <h1 className="text-3xl font-bold tracking-tight text-navy-800">Create your account</h1>
@@ -91,19 +149,7 @@ export default function SignupPage() {
                 Join TrailWear and gear up for the trail.
             </p>
 
-            {/* Same endpoint as on the login page: Google sign-in creates the account
-                if there is none, so there is nothing separate to "sign up" with. */}
-            <div className="mt-8">
-                <GoogleButton label="Sign up with Google" />
-            </div>
-
-            <div className="my-6 flex items-center gap-4">
-                <span className="h-px flex-1 bg-border" />
-                <span className="text-xs font-medium uppercase tracking-wide text-navy-300">or</span>
-                <span className="h-px flex-1 bg-border" />
-            </div>
-
-            <form onSubmit={onSubmit} className="space-y-5">
+            <form onSubmit={onSubmit} className="mt-8 space-y-5">
                 {error && (
                     <p className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
                         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -224,6 +270,16 @@ export default function SignupPage() {
                     {submitting ? "Creating account…" : "Create account"}
                 </button>
             </form>
+
+            <div className="my-6 flex items-center gap-4">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium uppercase tracking-wide text-navy-300">or</span>
+                <span className="h-px flex-1 bg-border" />
+            </div>
+
+            {/* Same endpoint as on the login page: Google sign-in creates the account
+                if there is none, so there is nothing separate to "sign up" with. */}
+            <GoogleButton label="Sign up with Google" />
 
             <p className="mt-8 text-center text-sm text-navy-400">
                 Already have an account?{" "}
