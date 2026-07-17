@@ -27,6 +27,14 @@ const envSchema = z.object({
   // the origin the browser actually visits. Sent to Google as `redirect_uri` and
   // again during the code exchange, where the two must match exactly.
   GOOGLE_CALLBACK_URL: z.string().url().default('http://localhost:3000/api/auth/google/callback'),
+  // SMTP for transactional mail (email verification). Optional in the same way
+  // the Google credentials are: unset means mail is disabled and the app still
+  // boots, rather than refusing to start over a feature not everyone runs.
+  // For Gmail this must be an App Password, not the account password —
+  // https://myaccount.google.com/apppasswords
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(5000),
   CLIENT_URL: z.string().url().default('http://localhost:5173'),

@@ -1,5 +1,9 @@
 import argon2 from 'argon2';
 import * as userRepository from '../repositories/user.repository';
+import * as verificationRepository from '../repositories/emailVerification.repository';
+import * as emailVerificationService from './emailVerification.service';
+import { env } from '../config/env';
+import { logger } from '../config/logger';
 import { toPublicUser } from '../models/user.model';
 import { AppError } from '../utils/AppError';
 import { isStrongEnough } from '../utils/passwordStrength';
@@ -14,13 +18,18 @@ export interface AuthedUser extends PublicUser {
   tokenVersion: number;
 }
 
+export interface RegisterResult extends AuthedUser {
+  /** False when a verification link is on its way and login is not yet possible. */
+  emailVerified: boolean;
+}
+
 export interface LoginResult {
   user: AuthedUser;
   /** True when the password was correct but a second factor is still required. */
   mfaRequired: boolean;
 }
 
-export async function register(input: RegisterDto): Promise<AuthedUser> {
+export async function register(input: RegisterDto): Promise<RegisterResult> {
   const existing = await userRepository.findByEmail(input.email);
   if (existing) {
     throw new AppError(409, 'An account with this email already exists');
@@ -36,6 +45,14 @@ export async function register(input: RegisterDto): Promise<AuthedUser> {
     );
   }
 
+  // Without a mailer no account can ever prove its address. In development that
+  // is an inconvenience, so registration proceeds and the account is treated as
+  // verified; in production it would silently recreate the takeover this feature
+  // exists to close, so it fails loudly instead.
+  if (!emailVerificationService.isEmailEnabled() && env.NODE_ENV === 'production') {
+    throw new AppError(503, 'Registration is temporarily unavailable. Please try again later.');
+  }
+
   const hashed = await argon2.hash(input.password);
   const user = await userRepository.create({
     email: input.email,
@@ -43,7 +60,17 @@ export async function register(input: RegisterDto): Promise<AuthedUser> {
     name: input.name,
   });
 
-  return { ...toPublicUser(user), tokenVersion: user.tokenVersion };
+  if (!emailVerificationService.isEmailEnabled()) {
+    logger.warn(
+      'SMTP is not configured — new account auto-verified without proving its email. Set SMTP_USER and SMTP_PASS.',
+      { userId: user.id }
+    );
+    await verificationRepository.markUserVerified(user.id);
+    return { ...toPublicUser(user), tokenVersion: user.tokenVersion, emailVerified: true };
+  }
+
+  await emailVerificationService.sendVerificationEmail(user.id, user.email, user.name);
+  return { ...toPublicUser(user), tokenVersion: user.tokenVersion, emailVerified: false };
 }
 
 export async function login(input: LoginDto): Promise<LoginResult> {
@@ -84,6 +111,14 @@ export async function login(input: LoginDto): Promise<LoginResult> {
     await userRepository.clearFailedLogins(user.id);
   }
 
+  // Checked only after the password is accepted, and deliberately so. Reporting
+  // "unverified" before knowing the password would tell anyone who asks which
+  // addresses have accounts — the exact leak the generic error above prevents.
+  // Past this line the caller has already proven they own the account.
+  if (!user.emailVerified) {
+    throw new AppError(403, 'Please verify your email address before logging in.');
+  }
+
   return {
     user: { ...toPublicUser(user), tokenVersion: user.tokenVersion },
     mfaRequired: user.mfaEnabled,
@@ -95,6 +130,12 @@ export interface GoogleLoginResult extends LoginResult {
   created: boolean;
   /** True when an existing password account gained a Google identity. */
   linked: boolean;
+  /**
+   * True when the linked account had never verified its email, so its password
+   * was discarded. Worth auditing loudly: it is either a benign re-registration
+   * or a takeover attempt that just failed.
+   */
+  reclaimed: boolean;
 }
 
 /**
@@ -112,6 +153,7 @@ export async function loginWithGoogle(identity: GoogleIdentity): Promise<GoogleL
       mfaRequired: byGoogleId.mfaEnabled,
       created: false,
       linked: false,
+      reclaimed: false,
     };
   }
 
@@ -127,12 +169,30 @@ export async function loginWithGoogle(identity: GoogleIdentity): Promise<GoogleL
       );
     }
 
+    // An account whose email was never verified proves nothing: anyone can
+    // register an address they do not own. Google has just proven ownership, so
+    // the Google user is the rightful holder and the pre-existing password is
+    // discarded rather than left working. Without this, an attacker could
+    // register victim@example.com, wait for the victim to sign in with Google,
+    // and keep password access to the victim's account.
+    if (!byEmail.emailVerified) {
+      const reclaimed = await userRepository.linkGoogleAndReclaim(byEmail.id, identity.googleId);
+      return {
+        user: { ...toPublicUser(reclaimed), tokenVersion: reclaimed.tokenVersion },
+        mfaRequired: reclaimed.mfaEnabled,
+        created: false,
+        linked: true,
+        reclaimed: true,
+      };
+    }
+
     const linked = await userRepository.linkGoogle(byEmail.id, identity.googleId);
     return {
       user: { ...toPublicUser(linked), tokenVersion: linked.tokenVersion },
       mfaRequired: linked.mfaEnabled,
       created: false,
       linked: true,
+      reclaimed: false,
     };
   }
 
@@ -156,6 +216,7 @@ export async function loginWithGoogle(identity: GoogleIdentity): Promise<GoogleL
     mfaRequired: created.mfaEnabled,
     created: true,
     linked: false,
+    reclaimed: false,
   };
 }
 

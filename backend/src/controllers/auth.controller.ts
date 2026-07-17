@@ -3,7 +3,14 @@ import * as authService from '../services/auth.service';
 import * as captchaService from '../services/captcha.service';
 import * as auditService from '../services/audit.service';
 import * as googleService from '../services/google.service';
-import { googleCallbackSchema, loginSchema, registerSchema } from '../dtos/auth.dto';
+import * as emailVerificationService from '../services/emailVerification.service';
+import {
+  googleCallbackSchema,
+  loginSchema,
+  registerSchema,
+  resendVerificationSchema,
+  verifyEmailSchema,
+} from '../dtos/auth.dto';
 import { AppError } from '../utils/AppError';
 import {
   clearAuthCookie,
@@ -21,14 +28,50 @@ import {
 
 export async function register(req: Request, res: Response) {
   const input = registerSchema.parse(req.body);
-  const { tokenVersion, ...user } = await authService.register(input);
-
-  const token = signToken({ id: user.id, email: user.email, role: user.role, tokenVersion });
-  setAuthCookie(res, token);
+  const { tokenVersion, emailVerified, ...user } = await authService.register(input);
 
   await auditService.record(req, { action: 'REGISTER', entity: 'Auth', userId: user.id });
 
-  res.status(201).json({ success: true, data: { user } });
+  // No session until the address is proven. Signing the user straight in would
+  // make the verification link decorative — they would already be past it.
+  if (!emailVerified) {
+    res.status(201).json({
+      success: true,
+      data: { user, emailVerificationRequired: true },
+    });
+    return;
+  }
+
+  // Reached only when SMTP is unconfigured in development, where the account is
+  // auto-verified and there is nothing to wait for.
+  const token = signToken({ id: user.id, email: user.email, role: user.role, tokenVersion });
+  setAuthCookie(res, token);
+
+  res.status(201).json({ success: true, data: { user, emailVerificationRequired: false } });
+}
+
+export async function verifyEmail(req: Request, res: Response) {
+  const { token } = verifyEmailSchema.parse(req.body);
+  await emailVerificationService.verify(token);
+
+  await auditService.record(req, { action: 'EMAIL_VERIFIED', entity: 'Auth', userId: null });
+
+  res.json({ success: true, message: 'Your email has been verified. You can now log in.' });
+}
+
+/**
+ * Always reports success, whether or not an account exists or a mail was
+ * actually sent. This endpoint is unauthenticated, so a truthful answer would
+ * let anyone test which addresses are registered.
+ */
+export async function resendVerification(req: Request, res: Response) {
+  const { email } = resendVerificationSchema.parse(req.body);
+  await emailVerificationService.resend(email);
+
+  res.json({
+    success: true,
+    message: 'If that address needs verifying, a new link is on its way.',
+  });
 }
 
 export async function login(req: Request, res: Response) {
@@ -71,15 +114,25 @@ export async function login(req: Request, res: Response) {
   } catch (err) {
     if (err instanceof AppError) {
       const locked = err.statusCode === 423;
+      // The password was right but the address was never proven. Distinct from a
+      // failed login: nothing was guessed, so it is not an attack signal.
+      const unverified = err.statusCode === 403;
+
       await auditService.record(req, {
-        action: locked ? 'LOGIN_LOCKED' : 'LOGIN_FAILED',
+        action: unverified ? 'LOGIN_UNVERIFIED' : locked ? 'LOGIN_LOCKED' : 'LOGIN_FAILED',
         entity: 'Auth',
         userId: null,
         // The attempted email is recorded; the password never is.
         metadata: { email: input.email },
       });
 
-      res.status(err.statusCode).json({ success: false, message: err.message });
+      res.status(err.statusCode).json({
+        success: false,
+        message: err.message,
+        // Lets the login page offer a re-send instead of a dead end. Only ever
+        // sent to someone who has already proven the password.
+        ...(unverified ? { data: { emailVerificationRequired: true } } : {}),
+      });
       return;
     }
 
@@ -145,9 +198,21 @@ export async function googleCallback(req: Request, res: Response) {
 
   try {
     const identity = await googleService.exchangeCode(code);
-    const { user: authed, mfaRequired, created, linked } =
+    const { user: authed, mfaRequired, created, linked, reclaimed } =
       await authService.loginWithGoogle(identity);
     const { tokenVersion, ...user } = authed;
+
+    // An unverified account just had its password discarded. That is either a
+    // user who registered and never verified, or a takeover attempt that failed —
+    // both worth a record of their own.
+    if (reclaimed) {
+      await auditService.record(req, {
+        action: 'ACCOUNT_RECLAIMED',
+        entity: 'Auth',
+        userId: user.id,
+        metadata: { reason: 'unverified_account_claimed_by_verified_google_identity' },
+      });
+    }
 
     // Google proving who someone is does not substitute for the second factor
     // they deliberately turned on. Same pending-token handoff as the password

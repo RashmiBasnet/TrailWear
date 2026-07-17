@@ -21,6 +21,14 @@ model User {
   // cannot be attached to two users.
   googleId String? @unique
 
+  // Whether ownership of `email` has actually been proven — by clicking a
+  // verification link, or by Google asserting email_verified. Registration alone
+  // proves nothing: anyone can type someone else's address.
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+
+  emailVerificationTokens EmailVerificationToken[]
+
   name      String
   role      Role     @default(CUSTOMER)
   createdAt DateTime @default(now())
@@ -61,6 +69,29 @@ model PasswordHistory {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   hash      String
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/**
+ * Pending email-verification links.
+ *
+ * Only a SHA-256 hash of the token is stored, never the token itself: the
+ * emailed link is a credential, and a leaked database should not hand out
+ * working links. Plain SHA-256 rather than argon2 is deliberate — the token is
+ * 32 random bytes, so there is nothing to brute-force and a slow hash would only
+ * cost latency on every verification.
+ */
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  // Set on first use. Kept rather than deleted so a replayed link can be told
+  // apart from one that never existed.
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
 }

@@ -58,6 +58,14 @@ export const googleCallbackSchema = z.object({
   state: z.string().min(1, 'Missing state'),
 });
 
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1, 'Missing verification token'),
+});
+
+export const resendVerificationSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
 export type RegisterDto = z.infer<typeof registerSchema>;
 export type LoginDto = z.infer<typeof loginSchema>;
 export type GoogleCallbackDto = z.infer<typeof googleCallbackSchema>;

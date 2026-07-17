@@ -18,6 +18,12 @@ export type AuditAction =
   | 'LOGIN_LOCKED'
   | 'LOGOUT'
   | 'PASSWORD_CHANGED'
+  // Email ownership
+  | 'EMAIL_VERIFIED'
+  | 'LOGIN_UNVERIFIED'
+  // An unverified account was claimed by a Google identity that proved the
+  // address, discarding the password it was registered with.
+  | 'ACCOUNT_RECLAIMED'
   // Google sign-in. Kept distinct from LOGIN/REGISTER so a review can tell how
   // an account was actually entered, not just that it was.
   | 'GOOGLE_LOGIN'

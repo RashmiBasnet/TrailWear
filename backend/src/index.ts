@@ -8,6 +8,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimit';
 import { isUsingTestKeys } from './services/captcha.service';
 import { isConfigured as isGoogleConfigured } from './services/google.service';
+import { isConfigured as isEmailConfigured } from './config/email';
 import { UPLOAD_DIR } from './middleware/upload';
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
@@ -93,5 +94,18 @@ app.listen(env.PORT, () => {
     logger.warn(
       'Google sign-in is disabled — set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable it.'
     );
+  }
+
+  // Without a mailer nobody can prove they own an address, so new accounts are
+  // auto-verified. Tolerable locally; in production it reopens the takeover that
+  // email verification exists to close, and registration refuses outright.
+  if (!isEmailConfigured()) {
+    const message =
+      'SMTP is not configured — new accounts are auto-verified without proving their email. Set SMTP_USER and SMTP_PASS.';
+    if (env.NODE_ENV === 'production') {
+      logger.error(message);
+    } else {
+      logger.warn(message);
+    }
   }
 });
