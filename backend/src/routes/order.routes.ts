@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import * as orderController from '../controllers/order.controller';
 import { requireAuth } from '../middleware/requireAuth';
+import { requireFreshPassword } from '../middleware/requireFreshPassword';
 import { orderLimiter } from '../middleware/rateLimit';
 import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-router.use(requireAuth);
+router.use(requireAuth, requireFreshPassword);
 
 router.get('/', asyncHandler(orderController.listOrders));
 router.post('/', orderLimiter, asyncHandler(orderController.createOrder));

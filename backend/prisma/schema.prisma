@@ -8,9 +8,19 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
+  id    String @id @default(cuid())
+  email String @unique
+
+  // Null for accounts that only ever signed in with Google — they have no
+  // password to hash. Anything reading this must handle absence rather than
+  // assume a hash is there.
+  password String?
+
+  // Google's `sub` claim: stable for the life of the account and never reused,
+  // unlike the email, which a user can change. Unique, so one Google account
+  // cannot be attached to two users.
+  googleId String? @unique
+
   name      String
   role      Role     @default(CUSTOMER)
   createdAt DateTime @default(now())
@@ -22,6 +32,11 @@ model User {
   // Brute-force lockout state.
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
+
+  // Password lifecycle. Set on registration and every change, so expiry can be
+  // measured and reuse of recent passwords blocked.
+  passwordChangedAt DateTime          @default(now())
+  passwordHistory   PasswordHistory[]
 
   // Multi-factor authentication (TOTP, RFC 6238).
   mfaEnabled     Boolean  @default(false)
@@ -36,18 +51,41 @@ model User {
   auditLogs AuditLog[]
 }
 
-model AuditLog {
+/**
+ * Argon2 hashes of a user's previous passwords, so a new password can be
+ * checked against them. Only hashes are kept — never the passwords themselves.
+ */
+model PasswordHistory {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  action    String
-  entity    String
-  entityId  String?
-  ip        String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hash      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  // Nullable: security events can happen without a known account, e.g. a failed
+  // login for an email that does not exist. Those still need recording.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  action   String
+  entity   String
+  entityId String?
+  ip       String?
+
+  // Extra context (attempted email, failure reason). Never secrets.
+  metadata Json?
+
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([entity, entityId])
+  @@index([action, createdAt])
 }
 
 enum Role {

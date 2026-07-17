@@ -2,36 +2,72 @@ import type { Request } from 'express';
 import * as auditRepository from '../repositories/audit.repository';
 import { auditLogger, logger } from '../config/logger';
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
+/**
+ * Every recordable event. Admin mutations plus the account activity a security
+ * review or incident response would actually need to reconstruct.
+ */
+export type AuditAction =
+  // Admin mutations
+  | 'CREATE'
+  | 'UPDATE'
+  | 'DELETE'
+  // Account activity
+  | 'REGISTER'
+  | 'LOGIN'
+  | 'LOGIN_FAILED'
+  | 'LOGIN_LOCKED'
+  | 'LOGOUT'
+  | 'PASSWORD_CHANGED'
+  // Google sign-in. Kept distinct from LOGIN/REGISTER so a review can tell how
+  // an account was actually entered, not just that it was.
+  | 'GOOGLE_LOGIN'
+  | 'GOOGLE_REGISTER'
+  | 'GOOGLE_LOGIN_FAILED'
+  // Second factor
+  | 'MFA_ENABLED'
+  | 'MFA_DISABLED'
+  | 'MFA_FAILED'
+  | 'MFA_BACKUP_USED'
+  // Other
+  | 'ORDER_PLACED'
+  | 'PROFILE_UPDATED'
+  | 'CAPTCHA_FAILED';
+
+export interface AuditInput {
+  action: AuditAction;
+  entity: string;
+  entityId?: string | null;
+  /** Defaults to the authenticated user. Pass explicitly for pre-session events. */
+  userId?: string | null;
+  /** Extra context. Never put passwords, tokens or codes in here. */
+  metadata?: Record<string, unknown> | null;
+}
 
 /**
- * Records a privileged action to both sinks:
+ * Records an event to both sinks:
  *  - winston's audit log (append-only file, rotated, long retention)
- *  - the AuditLog table (queryable, so admin activity can be surfaced in the UI)
+ *  - the AuditLog table (queryable, for surfacing activity in the UI)
  *
- * Deliberately never throws: an audit failure must not roll back or fail the
- * action the admin actually performed.
+ * Deliberately never throws: an audit failure must not fail the action the user
+ * actually performed.
  */
-export async function record(
-  req: Request,
-  action: AuditAction,
-  entity: string,
-  entityId?: string | null
-): Promise<void> {
-  const actor = req.user;
-  if (!actor) return;
+export async function record(req: Request, input: AuditInput): Promise<void> {
+  const userId = input.userId !== undefined ? input.userId : req.user?.id ?? null;
 
   const entry = {
-    userId: actor.id,
-    action,
-    entity,
-    entityId: entityId ?? null,
+    userId,
+    action: input.action,
+    entity: input.entity,
+    entityId: input.entityId ?? null,
     ip: req.ip ?? null,
+    metadata: (input.metadata ?? null) as never,
   };
 
-  // The file log carries the actor's email too, so it stays readable on its own
-  // without needing a join back to the users table.
-  auditLogger.info('admin.action', { ...entry, email: actor.email });
+  auditLogger.info(input.action.toLowerCase(), {
+    ...entry,
+    email: req.user?.email,
+    userAgent: req.get('user-agent'),
+  });
 
   try {
     await auditRepository.create(entry);

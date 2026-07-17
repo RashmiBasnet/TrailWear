@@ -24,7 +24,8 @@ const COMMON_PASSWORDS = new Set([
   'sunshine1',
 ]);
 
-const passwordSchema = z
+/** Shared so registration and password change enforce identical rules. */
+export const passwordSchema = z
   .string()
   .min(8, 'Password must be at least 8 characters')
   .max(128, 'Password must be at most 128 characters')
@@ -46,7 +47,17 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
+  // Only demanded once an IP has failed repeatedly; see captcha.service.
+  captchaToken: z.string().optional(),
+});
+
+// Both values are opaque strings minted by Google and by us respectively; their
+// meaning is checked in the callback, so there is nothing to validate but shape.
+export const googleCallbackSchema = z.object({
+  code: z.string().min(1, 'Missing authorization code'),
+  state: z.string().min(1, 'Missing state'),
 });
 
 export type RegisterDto = z.infer<typeof registerSchema>;
 export type LoginDto = z.infer<typeof loginSchema>;
+export type GoogleCallbackDto = z.infer<typeof googleCallbackSchema>;

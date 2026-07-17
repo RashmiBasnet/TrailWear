@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import * as mfaService from '../services/mfa.service';
 import * as authService from '../services/auth.service';
+import * as auditService from '../services/audit.service';
 import { mfaBackupCodeSchema, mfaCodeSchema, mfaDisableSchema } from '../dtos/mfa.dto';
 import { AppError } from '../utils/AppError';
 import {
@@ -44,12 +45,14 @@ export async function setup(req: Request, res: Response) {
 export async function enable(req: Request, res: Response) {
   const { code } = mfaCodeSchema.parse(req.body);
   const { backupCodes } = await mfaService.enable(req.user!.id, code);
+  await auditService.record(req, { action: 'MFA_ENABLED', entity: 'Auth' });
   res.json({ success: true, data: { backupCodes } });
 }
 
 export async function disable(req: Request, res: Response) {
   const { password, code } = mfaDisableSchema.parse(req.body);
   await mfaService.disable(req.user!.id, password, code);
+  await auditService.record(req, { action: 'MFA_DISABLED', entity: 'Auth' });
   res.json({ success: true, message: 'Two-factor authentication disabled' });
 }
 
@@ -57,8 +60,17 @@ export async function disable(req: Request, res: Response) {
 export async function verify(req: Request, res: Response) {
   const { code } = mfaCodeSchema.parse(req.body);
   const userId = requirePendingUser(req);
-  await mfaService.verifyCode(userId, code);
+
+  try {
+    await mfaService.verifyCode(userId, code);
+  } catch (err) {
+    // A correct password followed by failing codes is worth seeing in the trail.
+    await auditService.record(req, { action: 'MFA_FAILED', entity: 'Auth', userId });
+    throw err;
+  }
+
   const user = await completeLogin(res, userId);
+  await auditService.record(req, { action: 'LOGIN', entity: 'Auth', userId, metadata: { mfa: 'totp' } });
   res.json({ success: true, data: { user } });
 }
 
@@ -66,7 +78,21 @@ export async function verify(req: Request, res: Response) {
 export async function verifyBackup(req: Request, res: Response) {
   const { code } = mfaBackupCodeSchema.parse(req.body);
   const userId = requirePendingUser(req);
-  const backupCodesLeft = await mfaService.verifyBackupCode(userId, code);
+
+  let backupCodesLeft: number;
+  try {
+    backupCodesLeft = await mfaService.verifyBackupCode(userId, code);
+  } catch (err) {
+    await auditService.record(req, { action: 'MFA_FAILED', entity: 'Auth', userId, metadata: { mfa: 'backup' } });
+    throw err;
+  }
+
   const user = await completeLogin(res, userId);
+  await auditService.record(req, {
+    action: 'MFA_BACKUP_USED',
+    entity: 'Auth',
+    userId,
+    metadata: { backupCodesLeft },
+  });
   res.json({ success: true, data: { user, backupCodesLeft } });
 }

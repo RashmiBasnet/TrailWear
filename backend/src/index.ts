@@ -6,6 +6,8 @@ import { env } from './config/env';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimit';
+import { isUsingTestKeys } from './services/captcha.service';
+import { isConfigured as isGoogleConfigured } from './services/google.service';
 import { UPLOAD_DIR } from './middleware/upload';
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
@@ -74,4 +76,22 @@ app.listen(env.PORT, () => {
   logger.info(`TrailWear API listening on http://localhost:${env.PORT}`, {
     env: env.NODE_ENV,
   });
+
+  // Google's test secret accepts any token, so the challenge is decorative.
+  // Loud in production, where that would silently disable the control.
+  if (isUsingTestKeys()) {
+    const message =
+      'reCAPTCHA is using Google test keys — every challenge will pass. Set RECAPTCHA_SECRET_KEY for real protection.';
+    if (env.NODE_ENV === 'production') {
+      logger.error(message);
+    } else {
+      logger.warn(message);
+    }
+  }
+
+  if (!isGoogleConfigured()) {
+    logger.warn(
+      'Google sign-in is disabled — set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable it.'
+    );
+  }
 });

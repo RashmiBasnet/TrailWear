@@ -17,7 +17,10 @@ export const mfaBackupCodeSchema = z.object({
 });
 
 export const mfaDisableSchema = z.object({
-  password: z.string().min(1, 'Password is required'),
+  // Optional only because Google-only accounts have no password to give. It is
+  // still required of everyone who has one — mfa.service decides, since only it
+  // knows which kind of account this is.
+  password: z.string().optional(),
   code: totpCode,
 });
 

@@ -2,12 +2,13 @@ import { Router } from 'express';
 import * as adminController from '../controllers/admin.controller';
 import { requireAuth } from '../middleware/requireAuth';
 import { requireAdmin } from '../middleware/requireAdmin';
+import { requireFreshPassword } from '../middleware/requireFreshPassword';
 import { uploads, validateUploadedImages } from '../middleware/upload';
 import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-router.use(requireAuth, requireAdmin);
+router.use(requireAuth, requireFreshPassword, requireAdmin);
 
 router.get('/products', asyncHandler(adminController.listProducts));
 router.post(

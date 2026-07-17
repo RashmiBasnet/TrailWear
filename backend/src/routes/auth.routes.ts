@@ -8,6 +8,12 @@ const router = Router();
 
 router.post('/register', authLimiter, asyncHandler(authController.register));
 router.post('/login', authLimiter, asyncHandler(authController.login));
+// No captcha on these two: the browser is handed straight to Google, which runs
+// its own bot defences, and a challenge cannot be solved mid-redirect anyway.
+// The rate limiter still applies.
+router.get('/google/start', authLimiter, asyncHandler(authController.googleStart));
+router.post('/google/callback', authLimiter, asyncHandler(authController.googleCallback));
+
 router.post('/logout', requireAuth, asyncHandler(authController.logout));
 router.get('/me', requireAuth, asyncHandler(authController.me));
 

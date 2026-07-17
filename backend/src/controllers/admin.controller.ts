@@ -21,7 +21,7 @@ export async function createProduct(req: Request, res: Response) {
   const files = req.files as Express.Multer.File[] | undefined;
   const images = files ? files.map((file) => `/uploads/${file.filename}`) : [];
   const product = await productService.createProduct({ ...input, images });
-  await auditService.record(req, 'CREATE', 'Product', product.id);
+  await auditService.record(req, { action: 'CREATE', entity: 'Product', entityId: product.id });
   res.status(201).json({ success: true, data: { product } });
 }
 
@@ -32,20 +32,20 @@ export async function updateProduct(req: Request, res: Response) {
     input.images = files.map((file) => `/uploads/${file.filename}`);
   }
   const product = await productService.updateProduct(req.params.id, input);
-  await auditService.record(req, 'UPDATE', 'Product', product.id);
+  await auditService.record(req, { action: 'UPDATE', entity: 'Product', entityId: product.id });
   res.json({ success: true, data: { product } });
 }
 
 export async function deleteProduct(req: Request, res: Response) {
   await productService.deleteProduct(req.params.id);
-  await auditService.record(req, 'DELETE', 'Product', req.params.id);
+  await auditService.record(req, { action: 'DELETE', entity: 'Product', entityId: req.params.id });
   res.json({ success: true, message: 'Product deleted' });
 }
 
 export async function createCategory(req: Request, res: Response) {
   const input = createCategorySchema.parse(req.body);
   const category = await categoryService.createCategory(input);
-  await auditService.record(req, 'CREATE', 'Category', category.id);
+  await auditService.record(req, { action: 'CREATE', entity: 'Category', entityId: category.id });
   res.status(201).json({ success: true, data: { category } });
 }
 

@@ -8,8 +8,22 @@ export function findById(id: string) {
   return prisma.user.findUnique({ where: { id } });
 }
 
+export function findByGoogleId(googleId: string) {
+  return prisma.user.findUnique({ where: { googleId } });
+}
+
 export function create(data: { email: string; password: string; name: string }) {
   return prisma.user.create({ data });
+}
+
+/** Creates a Google-only account: no password is set, and none is ever required. */
+export function createWithGoogle(data: { email: string; googleId: string; name: string }) {
+  return prisma.user.create({ data });
+}
+
+/** Attaches a Google identity to an account that already exists. */
+export function linkGoogle(id: string, googleId: string) {
+  return prisma.user.update({ where: { id }, data: { googleId } });
 }
 
 export function updateName(id: string, name: string) {
@@ -67,6 +81,21 @@ export function setMfaLastUsedStep(id: string, step: number) {
   return prisma.user.update({
     where: { id },
     data: { mfaLastUsedStep: step },
+  });
+}
+
+/**
+ * Sets a new password. tokenVersion is bumped in the same write so that every
+ * session issued under the old password stops validating immediately.
+ */
+export function updatePassword(id: string, hash: string) {
+  return prisma.user.update({
+    where: { id },
+    data: {
+      password: hash,
+      passwordChangedAt: new Date(),
+      tokenVersion: { increment: 1 },
+    },
   });
 }
 

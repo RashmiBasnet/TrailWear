@@ -133,9 +133,14 @@ export async function verifyBackupCode(userId: string, code: string): Promise<nu
 
 /**
  * Turning MFA off requires the password AND a current code: a hijacked session
- * alone must not be enough to strip the second factor.
+ * alone must not be enough to strip the second factor. Google-only accounts have
+ * no password, so for those the code alone stands (see below).
  */
-export async function disable(userId: string, password: string, code: string): Promise<void> {
+export async function disable(
+  userId: string,
+  password: string | undefined,
+  code: string
+): Promise<void> {
   const user = await userRepository.findById(userId);
   if (!user) {
     throw new AppError(404, 'User not found');
@@ -144,8 +149,14 @@ export async function disable(userId: string, password: string, code: string): P
     throw new AppError(400, 'Two-factor authentication is not enabled');
   }
 
-  if (!(await argon2.verify(user.password, password))) {
-    throw new AppError(401, 'Incorrect password');
+  // A Google-only account has no password to demand. The current code below is
+  // then the sole proof — weaker than password-plus-code, but it is the strongest
+  // proof such an account can give, and refusing outright would leave the user
+  // unable to ever turn MFA off.
+  if (user.password) {
+    if (!password || !(await argon2.verify(user.password, password))) {
+      throw new AppError(401, 'Incorrect password');
+    }
   }
   if (!(await checkToken(decrypt(user.mfaSecret), code)).valid) {
     throw new AppError(401, 'Invalid authentication code');
