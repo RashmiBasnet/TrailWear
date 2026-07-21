@@ -7,11 +7,13 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { handleVerifyEsewa } from "@/lib/actions/order-action";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 function EsewaCallback() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const toast = useToast();
+    const csrfToken = useCsrf();
     const { refresh } = useCart();
     const [error, setError] = useState("");
     const verifiedRef = useRef(false);
@@ -29,7 +31,7 @@ function EsewaCallback() {
                 return;
             }
 
-            const result = await handleVerifyEsewa(data);
+            const result = await handleVerifyEsewa(csrfToken, data);
             if (result.success) {
                 await refresh();
                 toast.success("Payment successful", "Thanks for your order!");

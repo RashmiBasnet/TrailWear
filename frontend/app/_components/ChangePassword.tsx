@@ -12,12 +12,14 @@ import PasswordStrengthMeter, {
     MINIMUM_SCORE,
     scorePassword,
 } from "@/app/_components/PasswordStrengthMeter";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const inputClass =
     "w-full rounded-lg border border-border bg-white px-3.5 py-2 text-sm text-navy-800 placeholder:text-navy-300 focus:border-navy-400 focus:outline-none";
 
 export default function ChangePassword() {
     const toast = useToast();
+    const csrfToken = useCsrf();
     const { user } = useAuth();
 
     const [status, setStatus] = useState<any>(null);
@@ -68,7 +70,7 @@ export default function ChangePassword() {
         }
 
         setBusy(true);
-        const result = await handleChangePassword(currentPassword, newPassword);
+        const result = await handleChangePassword(csrfToken, currentPassword, newPassword);
         setBusy(false);
 
         if (result.success) {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { handleVerifyEmail } from "@/lib/actions/auth-action";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 export default function VerifyEmailPage() {
     return (
@@ -19,6 +20,7 @@ type State = "working" | "done" | "failed";
 function VerifyEmail() {
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
+    const csrfToken = useCsrf();
 
     const [state, setState] = useState<State>("working");
     const [message, setMessage] = useState("");
@@ -35,7 +37,7 @@ function VerifyEmail() {
             return;
         }
 
-        handleVerifyEmail(token).then((result) => {
+        handleVerifyEmail(csrfToken, token).then((result) => {
             setState(result.success ? "done" : "failed");
             setMessage(result.message);
         });

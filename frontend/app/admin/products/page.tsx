@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { handleGetAdminProducts, handleDeleteProduct } from "@/lib/actions/admin-action";
 import { useToast } from "@/context/ToastContext";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const LIMIT = 10;
 const genderLabels: Record<string, string> = {
@@ -15,6 +16,7 @@ const genderLabels: Record<string, string> = {
 
 export default function AdminProducts() {
     const toast = useToast();
+    const csrfToken = useCsrf();
     const [products, setProducts] = useState<any[]>([]);
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
     const [search, setSearch] = useState("");
@@ -53,7 +55,7 @@ export default function AdminProducts() {
     const onDelete = async (id: string, name: string) => {
         if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
         setDeletingId(id);
-        const result = await handleDeleteProduct(id);
+        const result = await handleDeleteProduct(csrfToken, id);
         setDeletingId("");
         if (result.success) {
             toast.success("Product deleted", `${name} was removed.`);

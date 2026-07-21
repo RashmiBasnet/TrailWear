@@ -11,6 +11,7 @@ import {
     handleRemoveCartItem,
     handleUpdateCartItem,
 } from "@/lib/actions/cart-action";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 type CartSummary = {
     id: string | null;
@@ -42,6 +43,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     const toast = useToast();
     const router = useRouter();
     const pathname = usePathname();
+    const csrfToken = useCsrf();
     const [cart, setCart] = useState<CartSummary>(emptyCart);
     const [loading, setLoading] = useState(true);
 
@@ -80,7 +82,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             return { success: false };
         }
 
-        const result = await handleAddCartItem({ productId: product.id, quantity, size });
+        const result = await handleAddCartItem(csrfToken, { productId: product.id, quantity, size });
         if (result.success) {
             setCart(result.data.cart);
             toast.success("Added to cart", `${product.name} is in your cart.`);
@@ -99,7 +101,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
                 .filter((item) => item.quantity > 0),
         }));
 
-        const result = await handleUpdateCartItem(itemId, { quantity });
+        const result = await handleUpdateCartItem(csrfToken, itemId, { quantity });
         if (result.success) {
             setCart(result.data.cart);
         } else {
@@ -115,7 +117,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             items: current.items.filter((item) => item.id !== itemId),
         }));
 
-        const result = await handleRemoveCartItem(itemId);
+        const result = await handleRemoveCartItem(csrfToken, itemId);
         if (result.success) {
             setCart(result.data.cart);
             toast.success("Removed from cart", productName ? `${productName} was removed.` : "Item removed.");
@@ -129,7 +131,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         const previousCart = cart;
         setCart(emptyCart);
 
-        const result = await handleClearCart();
+        const result = await handleClearCart(csrfToken);
         if (result.success) {
             setCart(result.data.cart);
             toast.success("Cart cleared", "All items were removed.");

@@ -9,6 +9,7 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { handleGetAddresses, handleAddAddress } from "@/lib/actions/profile-action";
 import { handleCreateOrder, handleInitiateEsewa } from "@/lib/actions/order-action";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const formatPrice = (value: number) => `NRs. ${Number(value).toFixed(2)}`;
 
@@ -16,6 +17,7 @@ export default function CheckoutPage() {
     const { user, loading: authLoading } = useAuth();
     const { cart, loading: cartLoading, refresh } = useCart();
     const toast = useToast();
+    const csrfToken = useCsrf();
     const router = useRouter();
 
     const [addresses, setAddresses] = useState<any[]>([]);
@@ -66,7 +68,7 @@ export default function CheckoutPage() {
         }
 
         setSavingAddress(true);
-        const result = await handleAddAddress({
+        const result = await handleAddAddress(csrfToken, {
             line1: line1.trim(),
             line2: line2.trim() || undefined,
             city: city.trim(),
@@ -100,7 +102,7 @@ export default function CheckoutPage() {
         setPlacing(true);
 
         if (paymentMethod === "ESEWA") {
-            const result = await handleInitiateEsewa({ addressId: selectedAddressId });
+            const result = await handleInitiateEsewa(csrfToken, { addressId: selectedAddressId });
             if (result.success && result.data.formUrl) {
                 const form = document.createElement("form");
                 form.method = "POST";
@@ -122,7 +124,7 @@ export default function CheckoutPage() {
             return;
         }
 
-        const result = await handleCreateOrder({ addressId: selectedAddressId });
+        const result = await handleCreateOrder(csrfToken, { addressId: selectedAddressId });
         setPlacing(false);
 
         if (result.success) {

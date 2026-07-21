@@ -1,4 +1,5 @@
 "use server";
+import { assertCsrf } from "../csrf";
 
 import { getWishlist, addToWishlist, removeFromWishlist } from "../wishlist";
 
@@ -25,8 +26,9 @@ export const handleGetWishlist = async () => {
     }
 }
 
-export const handleAddToWishlist = async (productId: string) => {
+export const handleAddToWishlist = async (csrfToken: string, productId: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await addToWishlist(productId);
         if (result.success) {
             return {
@@ -48,8 +50,9 @@ export const handleAddToWishlist = async (productId: string) => {
     }
 }
 
-export const handleRemoveFromWishlist = async (productId: string) => {
+export const handleRemoveFromWishlist = async (csrfToken: string, productId: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await removeFromWishlist(productId);
         if (result.success) {
             return {

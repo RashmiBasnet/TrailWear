@@ -5,9 +5,11 @@ import Link from "next/link";
 import { AlertCircle, ArrowLeft, Mail, MailCheck } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { handleForgotPassword } from "@/lib/actions/auth-action";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 export default function ForgotPasswordPage() {
     const toast = useToast();
+    const csrfToken = useCsrf();
 
     const [email, setEmail] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -25,7 +27,7 @@ export default function ForgotPasswordPage() {
         }
 
         setSubmitting(true);
-        const result = await handleForgotPassword(email.trim());
+        const result = await handleForgotPassword(csrfToken, email.trim());
         setSubmitting(false);
 
         if (result.success) {

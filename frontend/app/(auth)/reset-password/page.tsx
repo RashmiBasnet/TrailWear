@@ -10,6 +10,7 @@ import PasswordStrengthMeter, {
     MINIMUM_SCORE,
     scorePassword,
 } from "@/app/_components/PasswordStrengthMeter";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const PASSWORD_REQUIREMENTS = [
     { key: "length", label: "At least 8 characters", test: (pw: string) => pw.length >= 8 },
@@ -29,6 +30,7 @@ function ResetPassword() {
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
     const toast = useToast();
+    const csrfToken = useCsrf();
 
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -70,7 +72,7 @@ function ResetPassword() {
         }
 
         setSubmitting(true);
-        const result = await handleResetPassword(token, password);
+        const result = await handleResetPassword(csrfToken, token, password);
         setSubmitting(false);
 
         if (result.success) {

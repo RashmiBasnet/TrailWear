@@ -9,6 +9,7 @@ import {
     handleRemoveFromWishlist,
 } from "@/lib/actions/wishlist-action";
 import { useToast } from "@/context/ToastContext";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const WishlistContext = createContext<any>(null);
 
@@ -16,6 +17,7 @@ export const WishlistProvider = ({ children }: { children: React.ReactNode }) =>
     const { user } = useAuth();
     const toast = useToast();
     const pathname = usePathname();
+    const csrfToken = useCsrf();
     const [wishlist, setWishlist] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -47,7 +49,7 @@ export const WishlistProvider = ({ children }: { children: React.ReactNode }) =>
         if (isWishlisted(product.id)) {
             const previousWishlist = wishlist;
             setWishlist((prev) => prev.filter((item) => item.product.id !== product.id));
-            const result = await handleRemoveFromWishlist(product.id);
+            const result = await handleRemoveFromWishlist(csrfToken, product.id);
             if (result.success) {
                 setWishlist(result.data.wishlist);
                 toast.success("Removed from wishlist", `${product.name} was removed.`);
@@ -61,7 +63,7 @@ export const WishlistProvider = ({ children }: { children: React.ReactNode }) =>
                 { id: `optimistic-${product.id}`, addedAt: new Date().toISOString(), product },
                 ...prev,
             ]);
-            const result = await handleAddToWishlist(product.id);
+            const result = await handleAddToWishlist(csrfToken, product.id);
             if (result.success) {
                 setWishlist(result.data.wishlist);
                 toast.success("Added to wishlist", `${product.name} is saved for later.`);

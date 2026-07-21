@@ -8,6 +8,7 @@ import {
     verifyMfa,
     verifyMfaBackupCode,
 } from "../auth";
+import { assertCsrf } from "../csrf";
 
 export const handleGetMfaStatus = async () => {
     try {
@@ -22,8 +23,9 @@ export const handleGetMfaStatus = async () => {
     }
 }
 
-export const handleSetupMfa = async () => {
+export const handleSetupMfa = async (csrfToken: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await setupMfa();
         if (result.success) {
             return { success: true, data: result.data, message: "Setup started" };
@@ -35,8 +37,9 @@ export const handleSetupMfa = async () => {
     }
 }
 
-export const handleEnableMfa = async (code: string) => {
+export const handleEnableMfa = async (csrfToken: string, code: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await enableMfa(code);
         if (result.success) {
             return { success: true, data: result.data, message: "Two-factor enabled" };
@@ -48,8 +51,9 @@ export const handleEnableMfa = async (code: string) => {
     }
 }
 
-export const handleDisableMfa = async (password: string, code: string) => {
+export const handleDisableMfa = async (csrfToken: string, password: string, code: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await disableMfa(password, code);
         if (result.success) {
             return { success: true, message: "Two-factor disabled" };
@@ -61,8 +65,9 @@ export const handleDisableMfa = async (password: string, code: string) => {
     }
 }
 
-export const handleVerifyMfa = async (code: string) => {
+export const handleVerifyMfa = async (csrfToken: string, code: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await verifyMfa(code);
         if (result.success) {
             return { success: true, data: result.data, message: "Verified" };
@@ -74,8 +79,9 @@ export const handleVerifyMfa = async (code: string) => {
     }
 }
 
-export const handleVerifyMfaBackupCode = async (code: string) => {
+export const handleVerifyMfaBackupCode = async (csrfToken: string, code: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await verifyMfaBackupCode(code);
         if (result.success) {
             return { success: true, data: result.data, message: "Verified" };

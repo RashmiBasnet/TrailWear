@@ -10,9 +10,11 @@ import {
     forgotPassword,
     resetPassword,
 } from "../auth";
+import { assertCsrf } from "../csrf";
 
-export const handleRegister = async (formData: any) => {
+export const handleRegister = async (csrfToken: string, formData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await registerUser(formData);
         if (result.success) {
             return {
@@ -34,8 +36,9 @@ export const handleRegister = async (formData: any) => {
     }
 }
 
-export const handleLogin = async (formData: any) => {
+export const handleLogin = async (csrfToken: string, formData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await loginUser(formData);
         if (result.success) {
             return {
@@ -58,8 +61,9 @@ export const handleLogin = async (formData: any) => {
     }
 }
 
-export const handleVerifyEmail = async (token: string) => {
+export const handleVerifyEmail = async (csrfToken: string, token: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await verifyEmail(token);
         return {
             success: true,
@@ -74,8 +78,9 @@ export const handleVerifyEmail = async (token: string) => {
     }
 }
 
-export const handleResendVerification = async (email: string) => {
+export const handleResendVerification = async (csrfToken: string, email: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await resendVerification(email);
         return {
             success: true,
@@ -90,8 +95,9 @@ export const handleResendVerification = async (email: string) => {
     }
 }
 
-export const handleForgotPassword = async (email: string) => {
+export const handleForgotPassword = async (csrfToken: string, email: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await forgotPassword(email);
         return {
             success: true,
@@ -106,8 +112,13 @@ export const handleForgotPassword = async (email: string) => {
     }
 }
 
-export const handleResetPassword = async (token: string, newPassword: string) => {
+export const handleResetPassword = async (
+    csrfToken: string,
+    token: string,
+    newPassword: string
+) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await resetPassword(token, newPassword);
         return {
             success: true,
@@ -122,8 +133,9 @@ export const handleResetPassword = async (token: string, newPassword: string) =>
     }
 }
 
-export const handleLogout = async () => {
+export const handleLogout = async (csrfToken: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await logoutUser();
         if (result.success) {
             return {

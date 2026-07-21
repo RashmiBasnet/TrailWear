@@ -1,4 +1,5 @@
 "use server";
+import { assertCsrf } from "../csrf";
 
 import {
     getAdminProducts,
@@ -32,8 +33,9 @@ export const handleGetAdminProducts = async (params?: any) => {
     }
 }
 
-export const handleCreateProduct = async (productData: any) => {
+export const handleCreateProduct = async (csrfToken: string, productData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await createProduct(productData);
         if (result.success) {
             return {
@@ -55,8 +57,9 @@ export const handleCreateProduct = async (productData: any) => {
     }
 }
 
-export const handleUpdateProduct = async (id: string, productData: any) => {
+export const handleUpdateProduct = async (csrfToken: string, id: string, productData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await updateProduct(id, productData);
         if (result.success) {
             return {
@@ -78,8 +81,9 @@ export const handleUpdateProduct = async (id: string, productData: any) => {
     }
 }
 
-export const handleDeleteProduct = async (id: string) => {
+export const handleDeleteProduct = async (csrfToken: string, id: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await deleteProduct(id);
         if (result.success) {
             return {
@@ -100,8 +104,9 @@ export const handleDeleteProduct = async (id: string) => {
     }
 }
 
-export const handleCreateCategory = async (categoryData: any) => {
+export const handleCreateCategory = async (csrfToken: string, categoryData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await createCategory(categoryData);
         if (result.success) {
             return {

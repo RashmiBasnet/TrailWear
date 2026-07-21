@@ -27,6 +27,7 @@ import {
     handleGetAddresses,
     handleAddAddress,
 } from "@/lib/actions/profile-action";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const formatDate = (value: string) =>
     new Date(value).toLocaleDateString("en-US", {
@@ -38,6 +39,7 @@ const formatDate = (value: string) =>
 export default function ProfilePage() {
     const { user, loading: authLoading, logout, refreshUser } = useAuth();
     const toast = useToast();
+    const csrfToken = useCsrf();
     const router = useRouter();
 
     const [profile, setProfile] = useState<any>(null);
@@ -93,7 +95,7 @@ export default function ProfilePage() {
         }
 
         setSavingName(true);
-        const result = await handleUpdateProfile({ name: nameInput.trim() });
+        const result = await handleUpdateProfile(csrfToken, { name: nameInput.trim() });
         setSavingName(false);
 
         if (result.success) {
@@ -114,7 +116,7 @@ export default function ProfilePage() {
         }
 
         setSavingAddress(true);
-        const result = await handleAddAddress({
+        const result = await handleAddAddress(csrfToken, {
             line1: line1.trim(),
             line2: line2.trim() || undefined,
             city: city.trim(),

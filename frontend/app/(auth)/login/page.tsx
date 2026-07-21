@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import GoogleButton from "@/app/_components/GoogleButton";
 import { handleResendVerification } from "@/lib/actions/auth-action";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const RECAPTCHA_SITE_KEY =
     process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
@@ -26,6 +27,7 @@ function LoginForm() {
     const toast = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const csrfToken = useCsrf();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -104,7 +106,7 @@ function LoginForm() {
 
     const onResend = async () => {
         setResending(true);
-        const result = await handleResendVerification(email.trim());
+        const result = await handleResendVerification(csrfToken, email.trim());
         setResending(false);
         toast.success("Check your inbox", result.message);
     };

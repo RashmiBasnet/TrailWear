@@ -12,6 +12,7 @@ import PasswordStrengthMeter, {
     scorePassword,
 } from "@/app/_components/PasswordStrengthMeter";
 import GoogleButton from "@/app/_components/GoogleButton";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const PASSWORD_REQUIREMENTS = [
     { key: "length", label: "At least 8 characters", test: (pw: string) => pw.length >= 8 },
@@ -23,6 +24,7 @@ export default function SignupPage() {
     const { user, loading, register } = useAuth();
     const toast = useToast();
     const router = useRouter();
+    const csrfToken = useCsrf();
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -93,7 +95,7 @@ export default function SignupPage() {
 
     const onResend = async () => {
         setResending(true);
-        const result = await handleResendVerification(sentTo);
+        const result = await handleResendVerification(csrfToken, sentTo);
         setResending(false);
         toast.success("Check your inbox", result.message);
     };

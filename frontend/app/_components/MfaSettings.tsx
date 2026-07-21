@@ -10,12 +10,14 @@ import {
     handleDisableMfa,
 } from "@/lib/actions/mfa-action";
 import { handleGetPasswordStatus } from "@/lib/actions/profile-action";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const inputClass =
     "w-full rounded-lg border border-border bg-white px-3.5 py-2 text-sm text-navy-800 placeholder:text-navy-300 focus:border-navy-400 focus:outline-none";
 
 export default function MfaSettings() {
     const toast = useToast();
+    const csrfToken = useCsrf();
 
     const [loading, setLoading] = useState(true);
     const [enabled, setEnabled] = useState(false);
@@ -55,7 +57,7 @@ export default function MfaSettings() {
 
     const onStartSetup = async () => {
         setBusy(true);
-        const result = await handleSetupMfa();
+        const result = await handleSetupMfa(csrfToken);
         setBusy(false);
 
         if (result.success) {
@@ -69,7 +71,7 @@ export default function MfaSettings() {
     const onEnable = async (e: React.FormEvent) => {
         e.preventDefault();
         setBusy(true);
-        const result = await handleEnableMfa(enableCode.trim());
+        const result = await handleEnableMfa(csrfToken, enableCode.trim());
         setBusy(false);
 
         if (result.success) {
@@ -88,7 +90,7 @@ export default function MfaSettings() {
     const onDisable = async (e: React.FormEvent) => {
         e.preventDefault();
         setBusy(true);
-        const result = await handleDisableMfa(disablePassword, disableCode.trim());
+        const result = await handleDisableMfa(csrfToken, disablePassword, disableCode.trim());
         setBusy(false);
 
         if (result.success) {

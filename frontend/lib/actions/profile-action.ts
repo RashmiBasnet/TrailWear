@@ -1,4 +1,5 @@
 "use server";
+import { assertCsrf } from "../csrf";
 
 import {
     getProfile,
@@ -22,8 +23,9 @@ export const handleGetPasswordStatus = async () => {
     }
 }
 
-export const handleChangePassword = async (currentPassword: string, newPassword: string) => {
+export const handleChangePassword = async (csrfToken: string, currentPassword: string, newPassword: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await changePassword(currentPassword, newPassword);
         if (result.success) {
             return { success: true, message: result.message || "Password updated" };
@@ -58,8 +60,9 @@ export const handleGetProfile = async () => {
     }
 }
 
-export const handleUpdateProfile = async (profileData: any) => {
+export const handleUpdateProfile = async (csrfToken: string, profileData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await updateProfile(profileData);
         if (result.success) {
             return {
@@ -81,8 +84,9 @@ export const handleUpdateProfile = async (profileData: any) => {
     }
 }
 
-export const handleAddAddress = async (addressData: any) => {
+export const handleAddAddress = async (csrfToken: string, addressData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await addAddress(addressData);
         if (result.success) {
             return {

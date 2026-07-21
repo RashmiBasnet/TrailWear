@@ -1,9 +1,11 @@
 "use server";
+import { assertCsrf } from "../csrf";
 
 import { createOrder, getOrders, getOrderById, initiateEsewa, verifyEsewa } from "../order";
 
-export const handleCreateOrder = async (orderData: any) => {
+export const handleCreateOrder = async (csrfToken: string, orderData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await createOrder(orderData);
         if (result.success) {
             return {
@@ -71,8 +73,9 @@ export const handleGetOrderById = async (id: string) => {
     }
 }
 
-export const handleInitiateEsewa = async (orderData: any) => {
+export const handleInitiateEsewa = async (csrfToken: string, orderData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await initiateEsewa(orderData);
         if (result.success) {
             return {
@@ -94,8 +97,9 @@ export const handleInitiateEsewa = async (orderData: any) => {
     }
 }
 
-export const handleVerifyEsewa = async (data: string) => {
+export const handleVerifyEsewa = async (csrfToken: string, data: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await verifyEsewa(data);
         if (result.success) {
             return {
