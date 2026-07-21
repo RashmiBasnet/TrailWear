@@ -21,20 +21,16 @@ export default function MfaSettings() {
     const [enabled, setEnabled] = useState(false);
     const [backupCodesLeft, setBackupCodesLeft] = useState(0);
 
-    // Enrolment
     const [qrCode, setQrCode] = useState("");
     const [secret, setSecret] = useState("");
     const [enableCode, setEnableCode] = useState("");
     const [busy, setBusy] = useState(false);
     const [backupCodes, setBackupCodes] = useState<string[]>([]);
 
-    // Disabling
     const [showDisable, setShowDisable] = useState(false);
     const [disablePassword, setDisablePassword] = useState("");
     const [disableCode, setDisableCode] = useState("");
 
-    // A Google-only account has no password, so turning MFA off cannot ask for
-    // one — the code alone has to stand.
     const [hasPassword, setHasPassword] = useState(true);
 
     const load = async () => {
@@ -147,7 +143,7 @@ export default function MfaSettings() {
                 </span>
             </div>
 
-            {/* One-time display of backup codes, right after enabling */}
+            {}
             {backupCodes.length > 0 && (
                 <div className="mt-4 rounded-lg border border-gold-300 bg-gold-50 p-4">
                     <p className="flex items-center gap-2 text-sm font-semibold text-gold-800">
@@ -188,7 +184,7 @@ export default function MfaSettings() {
                 </div>
             )}
 
-            {/* Enabled state */}
+            {}
             {enabled && backupCodes.length === 0 && (
                 <div className="mt-4">
                     <p className="text-sm text-navy-500">
@@ -251,7 +247,7 @@ export default function MfaSettings() {
                 </div>
             )}
 
-            {/* Disabled: start enrolment */}
+            {}
             {!enabled && !qrCode && (
                 <button
                     type="button"
@@ -263,7 +259,7 @@ export default function MfaSettings() {
                 </button>
             )}
 
-            {/* Enrolment: scan + confirm */}
+            {}
             {!enabled && qrCode && (
                 <form onSubmit={onEnable} className="mt-4 space-y-4 border-t border-border pt-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">

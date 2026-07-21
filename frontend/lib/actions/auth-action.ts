@@ -7,6 +7,8 @@ import {
     getMe,
     verifyEmail,
     resendVerification,
+    forgotPassword,
+    resetPassword,
 } from "../auth";
 
 export const handleRegister = async (formData: any) => {
@@ -84,6 +86,38 @@ export const handleResendVerification = async (email: string) => {
         return {
             success: false,
             message: err.message || "Could not resend the verification email"
+        };
+    }
+}
+
+export const handleForgotPassword = async (email: string) => {
+    try {
+        const result = await forgotPassword(email);
+        return {
+            success: true,
+            message: result.message || "If that address has an account, a reset link is on its way."
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE FORGOT PASSWORD ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Could not send the reset email"
+        };
+    }
+}
+
+export const handleResetPassword = async (token: string, newPassword: string) => {
+    try {
+        const result = await resetPassword(token, newPassword);
+        return {
+            success: true,
+            message: result.message || "Your password has been reset."
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE RESET PASSWORD ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Could not reset your password"
         };
     }
 }

@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { AlertCircle, Check, Eye, EyeOff, Lock, Mail, MailCheck, User, X } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useSearchParams } from "next/navigation";
+import { AlertCircle, Check, CheckCircle2, Eye, EyeOff, Lock, X } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
-import { handleResendVerification } from "@/lib/actions/auth-action";
+import { handleResetPassword } from "@/lib/actions/auth-action";
 import PasswordStrengthMeter, {
     MINIMUM_SCORE,
     scorePassword,
 } from "@/app/_components/PasswordStrengthMeter";
-import GoogleButton from "@/app/_components/GoogleButton";
 
 const PASSWORD_REQUIREMENTS = [
     { key: "length", label: "At least 8 characters", test: (pw: string) => pw.length >= 8 },
@@ -19,25 +17,28 @@ const PASSWORD_REQUIREMENTS = [
     { key: "number", label: "At least one number", test: (pw: string) => /\d/.test(pw) },
 ];
 
-export default function SignupPage() {
-    const { user, loading, register } = useAuth();
-    const toast = useToast();
-    const router = useRouter();
+export default function ResetPasswordPage() {
+    return (
+        <Suspense fallback={<div className="w-full max-w-md" />}>
+            <ResetPassword />
+        </Suspense>
+    );
+}
 
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
+function ResetPassword() {
+    const searchParams = useSearchParams();
+    const token = searchParams.get("token");
+    const toast = useToast();
+
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [redirecting, setRedirecting] = useState(false);
     const [error, setError] = useState("");
+    const [done, setDone] = useState(false);
 
-    const [sentTo, setSentTo] = useState("");
-    const [resending, setResending] = useState(false);
-
-    const userInputs = useMemo(() => [name, email, "trailwear"], [name, email]);
+    const userInputs = useMemo(() => ["trailwear"], []);
     const strengthScore = useMemo(
         () => scorePassword(password, userInputs)?.score ?? 0,
         [password, userInputs]
@@ -45,18 +46,16 @@ export default function SignupPage() {
     const meetsRules = PASSWORD_REQUIREMENTS.every((req) => req.test(password));
     const isStrong = meetsRules && strengthScore >= MINIMUM_SCORE;
 
-    useEffect(() => {
-        if (loading || !user || redirecting) return;
-        router.replace(user.role === "ADMIN" ? "/admin" : "/");
-    }, [user, loading, redirecting, router]);
-
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
 
-        if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-            setError("Please fill in all fields.");
-            toast.error("Missing signup details", "Please fill in all fields.");
+        if (!token) {
+            setError("This reset link is missing its token. Request a new one.");
+            return;
+        }
+        if (!password || !confirmPassword) {
+            setError("Please enter and confirm your new password.");
             return;
         }
         if (!isStrong) {
@@ -71,75 +70,73 @@ export default function SignupPage() {
         }
 
         setSubmitting(true);
-        const result = await register({ name: name.trim(), email: email.trim(), password });
+        const result = await handleResetPassword(token, password);
         setSubmitting(false);
 
         if (result.success) {
-            if (result.data?.emailVerificationRequired) {
-                setSentTo(email.trim());
-                return;
-            }
-
-            const role = result.data?.user?.role;
-            setRedirecting(true);
-            toast.success("Account created", "Welcome to TrailWear.");
-            router.replace(role === "ADMIN" ? "/admin" : "/");
-        } else {
-            const message = result.message || "Registration failed.";
-            setError(message);
-            toast.error("Registration failed", message);
+            setDone(true);
+            toast.success("Password reset", "You can now log in with your new password.");
+            return;
         }
+
+        setError(result.message);
+        toast.error("Couldn't reset password", result.message);
     };
 
-    const onResend = async () => {
-        setResending(true);
-        const result = await handleResendVerification(sentTo);
-        setResending(false);
-        toast.success("Check your inbox", result.message);
-    };
-
-    if (sentTo) {
+    if (!token) {
         return (
-            <div className="w-full max-w-md">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-navy-50">
-                    <MailCheck className="h-6 w-6 text-navy-600" />
+            <div className="w-full max-w-md text-center">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-danger/10">
+                    <AlertCircle className="h-6 w-6 text-danger" />
                 </span>
                 <h1 className="mt-4 text-3xl font-bold tracking-tight text-navy-800">
-                    Check your email
+                    Link didn&apos;t work
                 </h1>
                 <p className="mt-2 text-sm text-navy-400">
-                    We sent a verification link to{" "}
-                    <span className="font-medium text-navy-700">{sentTo}</span>. Open it to
-                    finish setting up your account — you&apos;ll need to verify before you can log in.
+                    This reset link is missing its token, so we can&apos;t verify it.
                 </p>
-                <p className="mt-4 text-xs text-navy-300">
-                    The link expires in 24 hours and can only be used once. If it hasn&apos;t
-                    arrived in a minute or two, check your spam folder.
+                <p className="mt-2 text-xs text-navy-300">
+                    Reset links expire after 1 hour and can only be used once.
                 </p>
-
-                <button
-                    type="button"
-                    onClick={onResend}
-                    disabled={resending}
-                    className="mt-8 w-full rounded-full border border-border bg-white px-6 py-3 text-sm font-semibold text-navy-800 transition hover:bg-navy-50 disabled:opacity-60"
+                <Link
+                    href="/forgot-password"
+                    className="mt-8 inline-block w-full rounded-full bg-navy-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-navy-700"
                 >
-                    {resending ? "Sending…" : "Resend the link"}
-                </button>
+                    Request a new link
+                </Link>
+            </div>
+        );
+    }
 
-                <p className="mt-8 text-center text-sm text-navy-400">
-                    <Link href="/login" className="font-semibold text-navy-700 hover:text-navy-900 hover:underline">
-                        Back to login
-                    </Link>
+    if (done) {
+        return (
+            <div className="w-full max-w-md text-center">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
+                    <CheckCircle2 className="h-6 w-6 text-success" />
+                </span>
+                <h1 className="mt-4 text-3xl font-bold tracking-tight text-navy-800">
+                    Password reset
+                </h1>
+                <p className="mt-2 text-sm text-navy-400">
+                    Your password has been changed and every other device has been signed
+                    out. Log in with your new password to continue.
                 </p>
+                <Link
+                    href="/login"
+                    className="mt-8 inline-block w-full rounded-full bg-navy-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-navy-700"
+                >
+                    Continue to login
+                </Link>
             </div>
         );
     }
 
     return (
         <div className="w-full max-w-md">
-            <h1 className="text-3xl font-bold tracking-tight text-navy-800">Create your account</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-navy-800">Choose a new password</h1>
             <p className="mt-2 text-sm text-navy-400">
-                Join TrailWear and gear up for the trail.
+                Pick a password you don&apos;t use anywhere else. You can&apos;t reuse a
+                recent one.
             </p>
 
             <form onSubmit={onSubmit} className="mt-8 space-y-5">
@@ -151,44 +148,8 @@ export default function SignupPage() {
                 )}
 
                 <div>
-                    <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-navy-800">
-                        Name
-                    </label>
-                    <div className="relative">
-                        <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-300" />
-                        <input
-                            id="name"
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="Tenzing Sherpa"
-                            autoComplete="name"
-                            className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-3.5 text-sm text-navy-800 placeholder:text-navy-300 transition focus:border-navy-500 focus:outline-none focus:ring-2 focus:ring-navy-100"
-                        />
-                    </div>
-                </div>
-
-                <div>
-                    <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-navy-800">
-                        Email
-                    </label>
-                    <div className="relative">
-                        <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-300" />
-                        <input
-                            id="email"
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="you@example.com"
-                            autoComplete="email"
-                            className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-3.5 text-sm text-navy-800 placeholder:text-navy-300 transition focus:border-navy-500 focus:outline-none focus:ring-2 focus:ring-navy-100"
-                        />
-                    </div>
-                </div>
-
-                <div>
                     <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-navy-800">
-                        Password
+                        New password
                     </label>
                     <div className="relative">
                         <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-300" />
@@ -199,6 +160,7 @@ export default function SignupPage() {
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="At least 8 characters"
                             autoComplete="new-password"
+                            autoFocus
                             className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-10 text-sm text-navy-800 placeholder:text-navy-300 transition focus:border-navy-500 focus:outline-none focus:ring-2 focus:ring-navy-100"
                         />
                         <button
@@ -231,7 +193,7 @@ export default function SignupPage() {
 
                 <div>
                     <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-navy-800">
-                        Confirm password
+                        Confirm new password
                     </label>
                     <div className="relative">
                         <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-300" />
@@ -260,23 +222,13 @@ export default function SignupPage() {
                     disabled={submitting}
                     className="w-full rounded-full bg-navy-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-navy-700 disabled:opacity-60"
                 >
-                    {submitting ? "Creating account…" : "Create account"}
+                    {submitting ? "Resetting…" : "Reset password"}
                 </button>
             </form>
 
-            <div className="my-6 flex items-center gap-4">
-                <span className="h-px flex-1 bg-border" />
-                <span className="text-xs font-medium uppercase tracking-wide text-navy-300">or</span>
-                <span className="h-px flex-1 bg-border" />
-            </div>
-
-            {}
-            <GoogleButton label="Sign up with Google" />
-
             <p className="mt-8 text-center text-sm text-navy-400">
-                Already have an account?{" "}
                 <Link href="/login" className="font-semibold text-navy-700 hover:text-navy-900 hover:underline">
-                    Log in
+                    Back to login
                 </Link>
             </p>
         </div>

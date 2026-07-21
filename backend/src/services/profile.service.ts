@@ -19,9 +19,6 @@ export async function getPasswordStatus(userId: string): Promise<{
     throw new AppError(404, 'User not found');
   }
 
-  // A Google-only account has a passwordChangedAt (it defaults to signup time)
-  // but no password, so ageing it would report a countdown to the expiry of
-  // nothing. hasPassword lets the profile page hide the whole section instead.
   if (!user.password) {
     return {
       hasPassword: false,

@@ -22,8 +22,6 @@ import adminRoutes from './routes/admin.routes';
 
 const app = express();
 
-// Required for express-rate-limit to see the real client IP behind a proxy
-// (Render/Railway/nginx) rather than limiting every user as one address.
 app.set('trust proxy', 1);
 
 app.use(
@@ -78,8 +76,6 @@ app.listen(env.PORT, () => {
     env: env.NODE_ENV,
   });
 
-  // Google's test secret accepts any token, so the challenge is decorative.
-  // Loud in production, where that would silently disable the control.
   if (isUsingTestKeys()) {
     const message =
       'reCAPTCHA is using Google test keys — every challenge will pass. Set RECAPTCHA_SECRET_KEY for real protection.';
@@ -96,9 +92,6 @@ app.listen(env.PORT, () => {
     );
   }
 
-  // Without a mailer nobody can prove they own an address, so new accounts are
-  // auto-verified. Tolerable locally; in production it reopens the takeover that
-  // email verification exists to close, and registration refuses outright.
   if (!isEmailConfigured()) {
     const message =
       'SMTP is not configured — new accounts are auto-verified without proving their email. Set SMTP_USER and SMTP_PASS.';

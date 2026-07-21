@@ -10,10 +10,6 @@ if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-/**
- * Raster formats only. SVG is deliberately excluded: it is XML, can carry
- * <script>, and would execute if ever opened directly from /uploads.
- */
 const ALLOWED = new Map<string, string>([
   ['image/jpeg', '.jpg'],
   ['image/png', '.png'],
@@ -26,8 +22,6 @@ const storage = multer.diskStorage({
     cb(null, UPLOAD_DIR);
   },
   filename: function (_req, file, cb) {
-    // The extension is derived from the allow-list, never from originalname,
-    // so a crafted filename can't plant a .html/.svg/.php on disk.
     const extension = ALLOWED.get(file.mimetype) ?? '.bin';
     cb(null, `${file.fieldname}-${randomUUID()}${extension}`);
   },
@@ -38,8 +32,6 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
-  // A first cheap pass. The mimetype is client-supplied and therefore untrusted;
-  // validateUploadedImages below is what actually proves the bytes are an image.
   if (!ALLOWED.has(file.mimetype)) {
     return cb(new AppError(400, 'Only JPEG, PNG, WebP or GIF images are allowed'));
   }
@@ -58,7 +50,6 @@ export const uploads = {
   fields: (fieldsArray: { name: string; maxCount?: number }[]) => upload.fields(fieldsArray),
 };
 
-/** Leading bytes that identify each format we accept. */
 const MAGIC_BYTES: { ext: string; test: (buf: Buffer) => boolean }[] = [
   { ext: '.jpg', test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
   {
@@ -91,11 +82,6 @@ function collect(req: Express.Request): Express.Multer.File[] {
   return req.file ? [req.file] : [];
 }
 
-/**
- * Runs after multer. Reads each file's real magic bytes and rejects anything
- * whose content doesn't match the declared image type, deleting it from disk.
- * This is the check that stops a script being uploaded as `image/png`.
- */
 export const validateUploadedImages: import('express').RequestHandler = (req, _res, next) => {
   const files = collect(req);
   if (files.length === 0) return next();
@@ -109,7 +95,6 @@ export const validateUploadedImages: import('express').RequestHandler = (req, _r
     }
 
     if (!actual || actual !== path.extname(file.path).toLowerCase()) {
-      // Remove every file from this request so nothing partial is left behind.
       for (const f of files) {
         fs.promises.unlink(f.path).catch(() => undefined);
       }

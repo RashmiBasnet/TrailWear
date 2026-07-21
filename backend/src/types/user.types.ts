@@ -3,7 +3,6 @@ export type Role = 'CUSTOMER' | 'ADMIN';
 export interface User {
   id: string;
   email: string;
-  /** Null on accounts that only sign in with Google. */
   password: string | null;
   googleId: string | null;
   name: string;

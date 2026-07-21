@@ -12,10 +12,6 @@ export function add(userId: string, hash: string) {
   return prisma.passwordHistory.create({ data: { userId, hash } });
 }
 
-/**
- * Drops history entries beyond the most recent `keep`, so the table cannot grow
- * without bound and old hashes are not retained longer than the policy needs.
- */
 export async function trim(userId: string, keep: number) {
   const stale = await prisma.passwordHistory.findMany({
     where: { userId },

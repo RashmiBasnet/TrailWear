@@ -2,39 +2,28 @@ import type { Request } from 'express';
 import * as auditRepository from '../repositories/audit.repository';
 import { auditLogger, logger } from '../config/logger';
 
-/**
- * Every recordable event. Admin mutations plus the account activity a security
- * review or incident response would actually need to reconstruct.
- */
 export type AuditAction =
-  // Admin mutations
   | 'CREATE'
   | 'UPDATE'
   | 'DELETE'
-  // Account activity
   | 'REGISTER'
   | 'LOGIN'
   | 'LOGIN_FAILED'
   | 'LOGIN_LOCKED'
   | 'LOGOUT'
   | 'PASSWORD_CHANGED'
-  // Email ownership
+  | 'PASSWORD_RESET_REQUESTED'
+  | 'PASSWORD_RESET'
   | 'EMAIL_VERIFIED'
   | 'LOGIN_UNVERIFIED'
-  // An unverified account was claimed by a Google identity that proved the
-  // address, discarding the password it was registered with.
   | 'ACCOUNT_RECLAIMED'
-  // Google sign-in. Kept distinct from LOGIN/REGISTER so a review can tell how
-  // an account was actually entered, not just that it was.
   | 'GOOGLE_LOGIN'
   | 'GOOGLE_REGISTER'
   | 'GOOGLE_LOGIN_FAILED'
-  // Second factor
   | 'MFA_ENABLED'
   | 'MFA_DISABLED'
   | 'MFA_FAILED'
   | 'MFA_BACKUP_USED'
-  // Other
   | 'ORDER_PLACED'
   | 'PROFILE_UPDATED'
   | 'CAPTCHA_FAILED';
@@ -43,20 +32,10 @@ export interface AuditInput {
   action: AuditAction;
   entity: string;
   entityId?: string | null;
-  /** Defaults to the authenticated user. Pass explicitly for pre-session events. */
   userId?: string | null;
-  /** Extra context. Never put passwords, tokens or codes in here. */
   metadata?: Record<string, unknown> | null;
 }
 
-/**
- * Records an event to both sinks:
- *  - winston's audit log (append-only file, rotated, long retention)
- *  - the AuditLog table (queryable, for surfacing activity in the UI)
- *
- * Deliberately never throws: an audit failure must not fail the action the user
- * actually performed.
- */
 export async function record(req: Request, input: AuditInput): Promise<void> {
   const userId = input.userId !== undefined ? input.userId : req.user?.id ?? null;
 

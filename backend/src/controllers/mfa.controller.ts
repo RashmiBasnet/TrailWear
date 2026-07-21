@@ -12,7 +12,6 @@ import {
   verifyMfaPendingToken,
 } from '../utils/jwt';
 
-/** Resolves the half-authenticated user from the short-lived pending cookie. */
 function requirePendingUser(req: Request): string {
   const token = req.cookies?.[MFA_PENDING_COOKIE] as string | undefined;
   if (!token) {
@@ -25,7 +24,6 @@ function requirePendingUser(req: Request): string {
   }
 }
 
-/** Completes login: swap the pending cookie for a real session. */
 async function completeLogin(res: Response, userId: string) {
   const { tokenVersion, ...user } = await authService.issueSessionFor(userId);
   clearMfaPendingCookie(res);
@@ -56,7 +54,6 @@ export async function disable(req: Request, res: Response) {
   res.json({ success: true, message: 'Two-factor authentication disabled' });
 }
 
-/** Second step of login, using an authenticator code. */
 export async function verify(req: Request, res: Response) {
   const { code } = mfaCodeSchema.parse(req.body);
   const userId = requirePendingUser(req);
@@ -64,7 +61,6 @@ export async function verify(req: Request, res: Response) {
   try {
     await mfaService.verifyCode(userId, code);
   } catch (err) {
-    // A correct password followed by failing codes is worth seeing in the trail.
     await auditService.record(req, { action: 'MFA_FAILED', entity: 'Auth', userId });
     throw err;
   }
@@ -74,7 +70,6 @@ export async function verify(req: Request, res: Response) {
   res.json({ success: true, data: { user } });
 }
 
-/** Second step of login, using a single-use backup code. */
 export async function verifyBackup(req: Request, res: Response) {
   const { code } = mfaBackupCodeSchema.parse(req.body);
   const userId = requirePendingUser(req);

@@ -4,11 +4,6 @@ import type { Response } from 'express';
 import { env } from '../config/env';
 import type { Role } from '../types/user.types';
 
-/**
- * Every token carries a `typ` claim and every verifier checks it. Without this,
- * the short-lived MFA-pending token — signed with the same secret — could simply
- * be replayed as the session cookie and skip the second factor entirely.
- */
 const TOKEN_TYPE_SESSION = 'session';
 const TOKEN_TYPE_MFA_PENDING = 'mfa_pending';
 const TOKEN_TYPE_OAUTH_STATE = 'oauth_state';
@@ -28,19 +23,12 @@ const COOKIE_NAME = 'token';
 const MFA_COOKIE_NAME = 'mfa_pending';
 const OAUTH_STATE_COOKIE_NAME = 'oauth_state';
 
-/** Window to finish the second step. Short, because the password is already accepted. */
 const MFA_PENDING_EXPIRES_IN = '5m';
 const MFA_PENDING_MAX_AGE_MS = 5 * 60 * 1000;
 
-/** Long enough to pick an account on Google's screen, short enough to be no use later. */
 const OAUTH_STATE_EXPIRES_IN = '10m';
 const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 
-/**
- * Converts a jsonwebtoken-style duration ('30d', '12h', '900') to milliseconds.
- * The cookie lifetime is derived from JWT_EXPIRES_IN rather than hardcoded, so
- * the cookie and the token it carries can never expire at different times.
- */
 function durationToMs(value: string): number {
   const match = /^(\d+)\s*([smhd])?$/.exec(value.trim());
   if (!match) {
@@ -72,7 +60,6 @@ export function verifyToken(token: string): AuthTokenPayload {
   return decoded;
 }
 
-/** Issued once the password checks out but before the second factor is proven. */
 export function signMfaPendingToken(payload: MfaPendingPayload): string {
   return jwt.sign({ ...payload, typ: TOKEN_TYPE_MFA_PENDING }, env.JWT_SECRET, {
     expiresIn: MFA_PENDING_EXPIRES_IN,
@@ -87,13 +74,6 @@ export function verifyMfaPendingToken(token: string): MfaPendingPayload {
   return decoded;
 }
 
-/**
- * Signs the OAuth `state` value handed to Google and echoed back on the callback.
- *
- * Signed rather than a bare random string so the callback can trust it without
- * server-side storage, and short-lived because it only has to survive the user
- * clicking through Google's consent screen.
- */
 export function signOAuthStateToken(): string {
   const nonce = randomBytes(16).toString('hex');
   return jwt.sign({ nonce, typ: TOKEN_TYPE_OAUTH_STATE }, env.JWT_SECRET, {
@@ -108,14 +88,6 @@ export function verifyOAuthStateToken(token: string): void {
   }
 }
 
-/**
- * Unlike the session cookies this is 'lax', not 'strict', and it has to be:
- * the callback arrives as a top-level navigation from accounts.google.com, and
- * a strict cookie is withheld on cross-site navigations. Strict here would mean
- * the state cookie is simply absent on every callback and no sign-in ever
- * completes. Lax still withholds it from cross-site subrequests, which is the
- * property the CSRF check depends on.
- */
 const oauthStateCookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',

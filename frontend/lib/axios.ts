@@ -14,8 +14,6 @@ const axiosInstance = axios.create(
 
 axiosInstance.interceptors.request.use(
     async (config) => {
-        // Forward whichever cookies we hold. During the MFA step the user has no
-        // session token yet, only the short-lived pending one.
         const parts: string[] = [];
 
         const token = await getAuthToken();
@@ -24,8 +22,6 @@ axiosInstance.interceptors.request.use(
         const pending = await getMfaPendingToken();
         if (pending) parts.push(`mfa_pending=${pending}`);
 
-        // Mid-Google-signin the user has neither, only the state to be matched
-        // against the one the backend issued.
         const oauthState = await getOAuthStateToken();
         if (oauthState) parts.push(`oauth_state=${oauthState}`);
 

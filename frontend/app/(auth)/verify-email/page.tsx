@@ -6,10 +6,6 @@ import { useSearchParams } from "next/navigation";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { handleVerifyEmail } from "@/lib/actions/auth-action";
 
-/**
- * Where the emailed link lands. useSearchParams opts out of prerendering, so the
- * body sits inside a boundary or the build fails.
- */
 export default function VerifyEmailPage() {
     return (
         <Suspense fallback={<div className="w-full max-w-md" />}>
@@ -27,9 +23,6 @@ function VerifyEmail() {
     const [state, setState] = useState<State>("working");
     const [message, setMessage] = useState("");
 
-    // React runs effects twice in development. The token is single use, so a
-    // second call would consume it and report failure on a link that just
-    // worked — the first attempt has to be the only one.
     const started = useRef(false);
 
     useEffect(() => {

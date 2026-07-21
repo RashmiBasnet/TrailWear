@@ -9,9 +9,6 @@ const router = Router();
 
 router.use(requireAuth);
 
-// Deliberately mounted BEFORE requireFreshPassword: a user with an expired
-// password must still be able to read that fact and set a new one, otherwise
-// expiry would lock them out permanently.
 router.get('/password', asyncHandler(profileController.passwordStatus));
 router.post('/password', authLimiter, asyncHandler(profileController.changePassword));
 

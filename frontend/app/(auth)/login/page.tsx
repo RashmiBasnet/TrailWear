@@ -10,16 +10,9 @@ import { useToast } from "@/context/ToastContext";
 import GoogleButton from "@/app/_components/GoogleButton";
 import { handleResendVerification } from "@/lib/actions/auth-action";
 
-// Google's public test key: renders a widget that always passes. Replace via
-// NEXT_PUBLIC_RECAPTCHA_SITE_KEY with a real key from google.com/recaptcha/admin
 const RECAPTCHA_SITE_KEY =
     process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
 
-/**
- * useSearchParams opts the tree out of prerendering, and Next refuses to build
- * without a boundary to fall back to. The form itself is the boundary's child so
- * only it waits on the URL, rather than the whole route.
- */
 export default function LoginPage() {
     return (
         <Suspense fallback={<div className="w-full max-w-md" />}>
@@ -40,20 +33,15 @@ function LoginForm() {
     const [submitting, setSubmitting] = useState(false);
     const [redirecting, setRedirecting] = useState(false);
 
-    // Google sign-in comes back as a redirect, so its outcome arrives in the URL
-    // rather than as a return value: an error to show, or the second-factor step
-    // to resume with the pending cookie already set.
     const [error, setError] = useState(searchParams.get("error") ?? "");
     const [mfaRequired, setMfaRequired] = useState(searchParams.get("mfa") === "required");
 
     const [mfaCode, setMfaCode] = useState("");
     const [useBackupCode, setUseBackupCode] = useState(false);
 
-    // Password accepted but the email was never verified.
     const [needsVerification, setNeedsVerification] = useState(false);
     const [resending, setResending] = useState(false);
 
-    // Required on every attempt; the server rejects a login without a valid token.
     const [captchaToken, setCaptchaToken] = useState<string | null>(null);
     const captchaRef = useRef<ReCAPTCHA>(null);
 
@@ -62,8 +50,6 @@ function LoginForm() {
         router.replace(user.role === "ADMIN" ? "/admin" : "/");
     }, [user, loading, redirecting, router]);
 
-    // Those params have been read into state above; drop them so a refresh does
-    // not resurrect a stale error or an MFA step whose pending token has expired.
     useEffect(() => {
         if (searchParams.get("error") || searchParams.get("mfa")) {
             router.replace("/login");
@@ -91,15 +77,12 @@ function LoginForm() {
         setSubmitting(false);
 
         if (!result.success) {
-            // Google tokens are single use, so a fresh one is needed either way.
             captchaRef.current?.reset();
             setCaptchaToken(null);
 
             const message = result.message || "Login failed.";
             setError(message);
 
-            // Password was right, the address just isn't proven yet. Offer a
-            // re-send rather than leaving them stuck on an error.
             if (result.emailVerificationRequired) {
                 setNeedsVerification(true);
                 toast.info("Verify your email", message);
@@ -110,7 +93,6 @@ function LoginForm() {
             return;
         }
 
-        // Password accepted but the account has a second factor: no session yet.
         if (result.data?.mfaRequired) {
             setMfaRequired(true);
             setPassword("");
@@ -301,9 +283,17 @@ function LoginForm() {
                 </div>
 
                 <div>
-                    <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-navy-800">
-                        Password
-                    </label>
+                    <div className="mb-1.5 flex items-center justify-between">
+                        <label htmlFor="password" className="block text-sm font-medium text-navy-800">
+                            Password
+                        </label>
+                        <Link
+                            href="/forgot-password"
+                            className="text-xs font-medium text-navy-500 hover:text-navy-800 hover:underline"
+                        >
+                            Forgot password?
+                        </Link>
+                    </div>
                     <div className="relative">
                         <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-300" />
                         <input
@@ -350,10 +340,7 @@ function LoginForm() {
 
             <GoogleButton />
 
-            {/* Shown to everyone, always. A Google-only account gets the same generic
-                "invalid email or password" as any other failure — telling that user
-                specifically to use Google would also tell an attacker which emails
-                have accounts. A standing hint helps them and reveals nothing. */}
+            {}
             <p className="mt-6 text-center text-xs text-navy-300">
                 Signed up with Google? Use the button above rather than a password.
             </p>

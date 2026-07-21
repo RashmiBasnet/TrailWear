@@ -47,8 +47,6 @@ export const loginUser = async (loginData: any) => {
         );
         const setCookie = response.headers["set-cookie"];
 
-        // With MFA enabled the backend withholds the session and returns a
-        // short-lived pending cookie instead, which only /mfa/verify can redeem.
         const token = extractToken(setCookie);
         if (token) {
             await setAuthToken(token);
@@ -66,8 +64,6 @@ export const loginUser = async (loginData: any) => {
             || err.message
             || "Login Failed"
         );
-        // Carried through so the login page can offer a re-send rather than a
-        // dead end. The backend only sends this once the password is accepted.
         error.emailVerificationRequired =
             err.response?.data?.data?.emailVerificationRequired === true;
         throw error;
@@ -100,10 +96,32 @@ export const resendVerification = async (email: string) => {
     }
 }
 
-/**
- * Starts Google sign-in: returns the consent screen URL to send the browser to,
- * and stores the state the callback will be checked against.
- */
+export const forgotPassword = async (email: string) => {
+    try {
+        const response = await axios.post(API.AUTH.FORGOT_PASSWORD, { email });
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Could not send the reset email"
+        );
+    }
+}
+
+export const resetPassword = async (token: string, newPassword: string) => {
+    try {
+        const response = await axios.post(API.AUTH.RESET_PASSWORD, { token, newPassword });
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Could not reset your password"
+        );
+    }
+}
+
 export const startGoogleLogin = async () => {
     try {
         const response = await axios.get(API.AUTH.GOOGLE.START);
@@ -123,17 +141,11 @@ export const startGoogleLogin = async () => {
     }
 }
 
-/**
- * Finishes Google sign-in by handing the authorization code to the backend,
- * which exchanges it and replies with the same cookies password login does.
- */
 export const completeGoogleLogin = async (code: string, state: string) => {
     try {
         const response = await axios.post(API.AUTH.GOOGLE.CALLBACK, { code, state });
         const setCookie = response.headers["set-cookie"];
 
-        // As with password login, an account with MFA gets a pending token here
-        // rather than a session; only /mfa/verify can redeem it.
         const token = extractToken(setCookie);
         if (token) {
             await setAuthToken(token);
@@ -147,8 +159,6 @@ export const completeGoogleLogin = async (code: string, state: string) => {
         await clearOAuthStateToken();
         return response.data;
     } catch (err: Error | any) {
-        // The state is single use on the backend, so it must not linger here
-        // either — a stale one would only fail the next attempt.
         await clearOAuthStateToken();
         throw new Error(
             err.response?.data?.message
@@ -175,7 +185,6 @@ export const logoutUser = async () => {
     }
 }
 
-/** Redeems the pending token + a TOTP (or backup) code for a real session. */
 const completeMfa = async (endpoint: string, code: string, fallbackMessage: string) => {
     try {
         const response = await axios.post(endpoint, { code });

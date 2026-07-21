@@ -23,9 +23,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const register = async (formData: any) => {
         const result = await handleRegister(formData);
-        // When the address still needs verifying there is no session yet, so the
-        // user must stay null — setting it would show a logged-in UI on top of a
-        // backend that rejects every request.
         if (result.success && !result.data?.emailVerificationRequired) {
             setUser(result.data.user);
         }
@@ -34,8 +31,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const login = async (formData: any) => {
         const result = await handleLogin(formData);
-        // When MFA is required there is no user yet — the caller must complete
-        // the second factor before a session exists.
         if (result.success && result.data?.user) {
             setUser(result.data.user);
         }

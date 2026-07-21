@@ -91,7 +91,6 @@ export function finalizePaidEsewaOrder(orderId: string, userId: string, refId: s
       throw new Error('ORDER_NOT_FOUND');
     }
 
-    // Already finalized — return as-is (idempotent for repeated callbacks).
     if (order.paymentStatus !== 'PAID') {
       for (const item of order.items) {
         const product = await tx.product.findUnique({ where: { id: item.productId } });

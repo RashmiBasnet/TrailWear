@@ -33,8 +33,6 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     }
   }
 
-  // Unexpected failure: log it in full server-side, but never leak internals
-  // (stack, driver messages) to the client.
   logger.error('Unhandled error', {
     err,
     method: req.method,

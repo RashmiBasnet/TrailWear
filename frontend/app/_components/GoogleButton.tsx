@@ -1,7 +1,3 @@
-/**
- * Deliberately an anchor, not a button with an onClick fetch: signing in means
- * handing the browser over to accounts.google.com, which is a real navigation.
- */
 export default function GoogleButton({ label = "Continue with Google" }: { label?: string }) {
     return (
         <a
@@ -14,7 +10,6 @@ export default function GoogleButton({ label = "Continue with Google" }: { label
     );
 }
 
-/** Google's four-colour mark. Inlined so it renders without a network round trip. */
 function GoogleLogo() {
     return (
         <svg className="h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">

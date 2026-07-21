@@ -18,8 +18,6 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     return;
   }
 
-  // A valid signature isn't enough: the token must also match the user's current
-  // tokenVersion, so logging out (which bumps it) retires tokens immediately.
   const user = await userRepository.findById(payload.id);
   if (!user || user.tokenVersion !== payload.tokenVersion) {
     res.status(401).json({ success: false, message: 'Session expired, please log in again' });

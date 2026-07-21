@@ -37,9 +37,6 @@ function sign(message: string): string {
   return crypto.createHmac('sha256', env.ESEWA_SECRET_KEY).update(message).digest('base64');
 }
 
-/**
- * Builds the signed form fields to POST to eSewa's hosted payment page.
- */
 export function buildPaymentFields(input: BuildFieldsInput): EsewaFormFields {
   const signedFieldNames = 'total_amount,transaction_uuid,product_code';
   const message =
@@ -62,10 +59,6 @@ export function buildPaymentFields(input: BuildFieldsInput): EsewaFormFields {
   };
 }
 
-/**
- * Recomputes the HMAC over the fields eSewa signed and compares it to the
- * signature it returned, proving the callback data was not tampered with.
- */
 export function verifyCallbackSignature(data: EsewaCallbackData): boolean {
   const values = data as unknown as Record<string, string>;
   const message = data.signed_field_names
@@ -80,10 +73,6 @@ export function verifyCallbackSignature(data: EsewaCallbackData): boolean {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-/**
- * Server-to-server status lookup — the authoritative confirmation that a
- * payment actually completed (cannot be faked by the client).
- */
 export async function checkTransactionStatus(
   totalAmount: string,
   transactionUuid: string

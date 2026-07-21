@@ -11,4 +11,15 @@ export const changePasswordSchema = z
     path: ['newPassword'],
   });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Missing reset token'),
+  newPassword: passwordSchema,
+});
+
 export type ChangePasswordDto = z.infer<typeof changePasswordSchema>;
+export type ForgotPasswordDto = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;

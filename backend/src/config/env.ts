@@ -8,30 +8,13 @@ const envSchema = z.object({
     .string()
     .regex(/^\d+\s*[smhd]?$/, "JWT_EXPIRES_IN must look like '30d', '12h' or '900'")
     .default('30d'),
-  // 32-byte key (64 hex chars) used to encrypt MFA secrets at rest.
-  // Generate with: openssl rand -hex 32
   MFA_ENCRYPTION_KEY: z
     .string()
     .regex(/^[0-9a-fA-F]{64}$/, 'MFA_ENCRYPTION_KEY must be 64 hex characters (32 bytes)'),
-  // Google reCAPTCHA v2 secret. Defaults to Google's public *test* secret, which
-  // makes every verification pass — fine for local wiring, useless as a control.
-  // Register real keys at https://www.google.com/recaptcha/admin
   RECAPTCHA_SECRET_KEY: z.string().default('6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'),
-  // Google OAuth 2.0. Optional: without them the Google routes return 503 and
-  // the rest of the app runs unchanged, so a checkout without credentials still
-  // boots. Create at https://console.cloud.google.com/apis/credentials and add
-  // GOOGLE_CALLBACK_URL verbatim as an Authorized redirect URI.
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
-  // Points at the frontend, not this API: the session cookie has to be set on
-  // the origin the browser actually visits. Sent to Google as `redirect_uri` and
-  // again during the code exchange, where the two must match exactly.
   GOOGLE_CALLBACK_URL: z.string().url().default('http://localhost:3000/api/auth/google/callback'),
-  // SMTP for transactional mail (email verification). Optional in the same way
-  // the Google credentials are: unset means mail is disabled and the app still
-  // boots, rather than refusing to start over a feature not everyone runs.
-  // For Gmail this must be an App Password, not the account password —
-  // https://myaccount.google.com/apppasswords
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),

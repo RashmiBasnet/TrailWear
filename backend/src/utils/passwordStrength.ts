@@ -11,12 +11,6 @@ const zxcvbn = new ZxcvbnFactory({
   translations: zxcvbnEn.translations,
 });
 
-/**
- * zxcvbn scores 0-4 by estimated guesses rather than character classes, so it
- * rejects passwords the regex rules happily accept — "Password123" satisfies
- * upper + lower + digit but is guessed almost immediately. 3 means "safely
- * unguessable" (>= 10^8 guesses).
- */
 export const MINIMUM_SCORE = 3;
 
 export interface StrengthResult {
@@ -25,10 +19,6 @@ export interface StrengthResult {
   suggestions: string[];
 }
 
-/**
- * Scores a password, penalising terms taken from the user's own details so
- * "rashmi@trailwear.com" / "Rashmi2026" scores as the weak password it is.
- */
 export function scorePassword(password: string, userInputs: string[] = []): StrengthResult {
   const result = zxcvbn.check(password, userInputs.filter(Boolean));
   return {

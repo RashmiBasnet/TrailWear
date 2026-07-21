@@ -3,17 +3,12 @@ import { logger } from '../config/logger';
 
 const SITEVERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify';
 
-/** Google's public test secret — always returns success, so it proves nothing. */
 const GOOGLE_TEST_SECRET = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe';
 
 export function isUsingTestKeys(): boolean {
   return env.RECAPTCHA_SECRET_KEY === GOOGLE_TEST_SECRET;
 }
 
-/**
- * Verifies a token with Google. Returns false on any failure, including network
- * errors — an unreachable verifier must not become a way to bypass the check.
- */
 export async function verifyToken(token: string, ip?: string): Promise<boolean> {
   if (!token) return false;
 

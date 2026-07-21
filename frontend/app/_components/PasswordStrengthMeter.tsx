@@ -14,7 +14,6 @@ const zxcvbn = new ZxcvbnFactory({
     translations: zxcvbnEn.translations,
 });
 
-/** Must match MINIMUM_SCORE in the backend's passwordStrength util. */
 export const MINIMUM_SCORE = 3;
 
 const LEVELS = [
@@ -37,7 +36,6 @@ export default function PasswordStrengthMeter({
     password: string;
     userInputs?: string[];
 }) {
-    // zxcvbn does real work; only re-run when the inputs actually change.
     const result = useMemo(
         () => scorePassword(password, userInputs),
         [password, userInputs.join("|")]
@@ -47,7 +45,6 @@ export default function PasswordStrengthMeter({
 
     const level = LEVELS[result.score];
     const filled = Math.max(result.score, 1);
-    // Estimated against slow offline hashing, which is what argon2 actually is.
     const crackTime = result.crackTimes?.offlineSlowHashingXPerSecond?.display ?? "";
 
     return (
@@ -72,7 +69,7 @@ export default function PasswordStrengthMeter({
                 )}
             </div>
 
-            {/* zxcvbn's own feedback: far more useful than "add a symbol" */}
+            {}
             {result.feedback.warning && (
                 <p className="mt-1 text-xs text-gold-700">{result.feedback.warning}</p>
             )}

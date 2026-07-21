@@ -293,7 +293,7 @@ export default function ProductDetails({ product }: { product: any }) {
                 </p>
             </section>
 
-            {/* Sticky add-to-cart bar for mobile */}
+            {}
             <div
                 className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 px-4 py-3 backdrop-blur lg:hidden"
                 style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}

@@ -23,8 +23,6 @@ export async function changePassword(req: Request, res: Response) {
   const input = changePasswordSchema.parse(req.body);
   await passwordService.changePassword(req.user!.id, input);
 
-  // The change invalidated every session, including this one. Re-issue a cookie
-  // for the caller so they stay signed in while other devices are logged out.
   const { tokenVersion, ...user } = await authService.issueSessionFor(req.user!.id);
   setAuthCookie(res, signToken({ id: user.id, email: user.email, role: user.role, tokenVersion }));
 
@@ -36,7 +34,6 @@ export async function changePassword(req: Request, res: Response) {
   });
 }
 
-/** Lets the profile page show how long the current password remains valid. */
 export async function passwordStatus(req: Request, res: Response) {
   const status = await profileService.getPasswordStatus(req.user!.id);
   res.json({ success: true, data: status });

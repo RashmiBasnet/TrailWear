@@ -20,7 +20,6 @@ const readable = winston.format.combine(
   })
 );
 
-/** General application logger: operational events and errors. */
 export const logger = winston.createLogger({
   level: env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: structured,
@@ -46,11 +45,6 @@ export const logger = winston.createLogger({
   ],
 });
 
-/**
- * Audit trail logger, kept separate from application noise: it has its own file
- * and a much longer retention, so admin activity can't be rotated away by a
- * burst of ordinary logs.
- */
 export const auditLogger = winston.createLogger({
   level: 'info',
   format: structured,

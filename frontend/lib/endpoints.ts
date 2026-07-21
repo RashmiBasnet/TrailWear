@@ -6,6 +6,8 @@ export const API = {
     ME: "/api/auth/me",
     VERIFY_EMAIL: "/api/auth/verify-email",
     RESEND_VERIFICATION: "/api/auth/resend-verification",
+    FORGOT_PASSWORD: "/api/auth/forgot-password",
+    RESET_PASSWORD: "/api/auth/reset-password",
     GOOGLE: {
       START: "/api/auth/google/start",
       CALLBACK: "/api/auth/google/callback",

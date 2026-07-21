@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// Lowercased entries that are rejected outright regardless of complexity rules.
 const COMMON_PASSWORDS = new Set([
   'password',
   'password1',
@@ -24,7 +23,6 @@ const COMMON_PASSWORDS = new Set([
   'sunshine1',
 ]);
 
-/** Shared so registration and password change enforce identical rules. */
 export const passwordSchema = z
   .string()
   .min(8, 'Password must be at least 8 characters')
@@ -42,17 +40,12 @@ export const registerSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
 });
 
-// Login intentionally does not apply the policy: existing passwords must still
-// be accepted, and the rules would leak what a valid password looks like.
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
-  // Only demanded once an IP has failed repeatedly; see captcha.service.
   captchaToken: z.string().optional(),
 });
 
-// Both values are opaque strings minted by Google and by us respectively; their
-// meaning is checked in the callback, so there is nothing to validate but shape.
 export const googleCallbackSchema = z.object({
   code: z.string().min(1, 'Missing authorization code'),
   state: z.string().min(1, 'Missing state'),

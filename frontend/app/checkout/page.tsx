@@ -102,7 +102,6 @@ export default function CheckoutPage() {
         if (paymentMethod === "ESEWA") {
             const result = await handleInitiateEsewa({ addressId: selectedAddressId });
             if (result.success && result.data.formUrl) {
-                // eSewa requires a form POST to its hosted payment page.
                 const form = document.createElement("form");
                 form.method = "POST";
                 form.action = result.data.formUrl;

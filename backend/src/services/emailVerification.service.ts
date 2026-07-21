@@ -6,24 +6,14 @@ import { env } from '../config/env';
 import { logger } from '../config/logger';
 import { AppError } from '../utils/AppError';
 
-/**
- * Long enough to survive a mail delay or a user who reads it that evening, short
- * enough that an old link found in an inbox years later is inert.
- */
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
-/** Re-sends allowed per user per hour, so the endpoint cannot be used to spam an inbox. */
 const MAX_SENDS_PER_HOUR = 5;
 
-/**
- * 32 bytes of CSPRNG output. The link is a bearer credential, so it has to be
- * unguessable on its own — an incrementing id or a timestamp would be forgeable.
- */
 function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
-/** Tokens are stored hashed; the raw value exists only in the email. */
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
@@ -32,12 +22,6 @@ export function isEmailEnabled(): boolean {
   return isConfigured();
 }
 
-/**
- * Issues a fresh link and emails it.
- *
- * Any previous link is retired first: a re-send should mean the older email
- * stops working, not that both do.
- */
 export async function sendVerificationEmail(userId: string, email: string, name: string) {
   const since = new Date(Date.now() - 60 * 60 * 1000);
   const recent = await verificationRepository.countRecent(userId, since);
@@ -63,13 +47,6 @@ export async function sendVerificationEmail(userId: string, email: string, name:
   );
 }
 
-/**
- * Redeems a link.
- *
- * Every failure returns the same message. The token is the only secret involved,
- * so distinguishing "expired" from "already used" from "never existed" would
- * describe the state of someone else's account to whoever holds a guess.
- */
 export async function verify(token: string): Promise<void> {
   const record = await verificationRepository.findByTokenHash(hashToken(token));
 
@@ -79,19 +56,10 @@ export async function verify(token: string): Promise<void> {
     throw invalid();
   }
 
-  // Single use, marked before the account changes so two clicks in flight at
-  // once cannot both proceed.
   await verificationRepository.markUsed(record.id);
   await verificationRepository.markUserVerified(record.userId);
 }
 
-/**
- * Re-sends to an address that may or may not have an account.
- *
- * Deliberately never reports whether it did: this endpoint is unauthenticated,
- * so a truthful answer would turn it into an account-existence oracle — the same
- * reason login returns a generic error.
- */
 export async function resend(email: string): Promise<void> {
   const user = await userRepository.findByEmail(email);
   if (!user || user.emailVerified) {
@@ -101,8 +69,6 @@ export async function resend(email: string): Promise<void> {
   try {
     await sendVerificationEmail(user.id, user.email, user.name);
   } catch (err) {
-    // A throttled or failed re-send must not surface either, for the same
-    // reason: the difference would be observable.
     logger.warn('Verification re-send failed', {
       userId: user.id,
       reason: err instanceof Error ? err.message : 'unknown',
@@ -113,8 +79,6 @@ export async function resend(email: string): Promise<void> {
 const BRAND = '#1e3a5f';
 
 function verificationEmailHtml(name: string, link: string): string {
-  // Table-based layout with inline styles: mail clients strip <style> blocks and
-  // have no flexbox, so anything more modern collapses in Outlook and Gmail.
   return `<!doctype html>
 <html>
   <body style="margin:0;padding:0;background:#f4f5f7;font-family:Segoe UI,Helvetica,Arial,sans-serif;">
@@ -166,7 +130,6 @@ function verificationEmailHtml(name: string, link: string): string {
 </html>`;
 }
 
-/** Plain-text alternative: some clients show it, and spam filters expect it. */
 function verificationEmailText(name: string, link: string): string {
   return `Hi ${name},
 
@@ -182,11 +145,6 @@ If you didn't create a TrailWear account, you can ignore this email.
 - TrailWear`;
 }
 
-/**
- * The name is user-supplied and lands in an HTML document, so it is escaped.
- * Mail clients render HTML: an unescaped name is a scripting hole in someone
- * else's inbox, not just a formatting bug.
- */
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

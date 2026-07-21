@@ -64,9 +64,6 @@ export const changePassword = async (currentPassword: string, newPassword: strin
     try {
         const response = await axios.post(API.PROFILE.CHANGE_PASSWORD, { currentPassword, newPassword });
 
-        // Changing the password invalidates every existing token, so the backend
-        // issues a replacement for this session. Without storing it, the user
-        // would be signed out the moment they changed their password.
         const cookie = (response.headers["set-cookie"] as string[] | undefined)
             ?.find((c) => c.startsWith("token="));
         const token = cookie?.split(";")[0].slice("token=".length);

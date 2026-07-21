@@ -22,10 +22,6 @@ export async function getOrder(userId: string, orderId: string): Promise<OrderSu
   return toOrderSummary(order);
 }
 
-/**
- * Validates the address + cart, and returns the priced order items and total.
- * Shared by the COD and eSewa checkout paths.
- */
 async function prepareOrder(userId: string, addressId: string) {
   const address = await addressRepository.findByIdForUser(addressId, userId);
   if (!address) {
@@ -71,11 +67,6 @@ export async function createOrder(
   }
 }
 
-/**
- * Creates an unpaid eSewa order (no stock change, cart untouched) and returns the
- * signed form fields to POST to eSewa. Stock is only committed once the payment
- * is verified. The order id doubles as eSewa's transaction_uuid.
- */
 export async function initiateEsewaPayment(
   userId: string,
   input: CreateOrderDto
@@ -99,11 +90,6 @@ export async function initiateEsewaPayment(
   return { orderId: order.id, formUrl: env.ESEWA_FORM_URL, fields };
 }
 
-/**
- * Verifies an eSewa payment. Confirms the callback signature (integrity), then
- * does a server-to-server status lookup (authoritative) before finalizing the
- * order — committing stock and clearing the cart only on a real completed payment.
- */
 export async function verifyEsewaPayment(
   userId: string,
   input: VerifyEsewaDto

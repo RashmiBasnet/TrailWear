@@ -36,7 +36,6 @@ export default function ChangePassword() {
         load();
     }, []);
 
-    // Feed the user's own details in, so a password built from them scores low.
     const userInputs = useMemo(
         () => [user?.email ?? "", user?.name ?? "", "trailwear"],
         [user?.email, user?.name]
@@ -86,9 +85,6 @@ export default function ChangePassword() {
     const daysLeft = status?.daysUntilExpiry ?? 0;
     const expiringSoon = !expired && daysLeft <= 14;
 
-    // A Google-only account has no password: no expiry to count down, and nothing
-    // to change. Offering the form would only produce a request the backend
-    // refuses, since there is no current password to prove.
     if (status && status.hasPassword === false) {
         return (
             <section className="rounded-xl border border-border bg-white p-5">

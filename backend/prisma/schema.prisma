@@ -28,6 +28,7 @@ model User {
   emailVerifiedAt DateTime?
 
   emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
 
   name      String
   role      Role     @default(CUSTOMER)
@@ -89,6 +90,29 @@ model EmailVerificationToken {
   tokenHash String    @unique
   expiresAt DateTime
   // Set on first use. Kept rather than deleted so a replayed link can be told
+  // apart from one that never existed.
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/**
+ * Pending password-reset links.
+ *
+ * Stored exactly like EmailVerificationToken and for the same reasons: only a
+ * SHA-256 hash of the 32-byte random token is kept, so a leaked database hands
+ * out no working links, and plain SHA-256 is enough because a 32-byte random
+ * value has nothing to brute-force. The link is a bearer credential — whoever
+ * holds it can set a new password — so it is short-lived and single use.
+ */
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  // Set on first use, kept rather than deleted so a replayed link can be told
   // apart from one that never existed.
   usedAt    DateTime?
   createdAt DateTime  @default(now())
