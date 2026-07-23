@@ -90,6 +90,66 @@ export async function initiateEsewaPayment(
   return { orderId: order.id, formUrl: env.ESEWA_FORM_URL, fields };
 }
 
+export async function resumeEsewaPayment(
+  userId: string,
+  orderId: string
+): Promise<{ orderId: string; formUrl: string; fields: EsewaFormFields }> {
+  const order = await orderRepository.findByIdForUser(orderId, userId);
+  if (!order) {
+    throw new AppError(404, 'Order not found');
+  }
+  if (order.paymentMethod !== 'ESEWA') {
+    throw new AppError(400, 'This order is not an eSewa payment');
+  }
+  if (order.paymentStatus === 'PAID') {
+    throw new AppError(409, 'This order has already been paid');
+  }
+  if (order.paymentStatus !== 'PENDING' || order.status === 'CANCELLED') {
+    throw new AppError(409, 'This payment can no longer be completed');
+  }
+
+  const total = Number(order.total);
+
+  // The customer may have actually completed the payment before navigating
+  // away; reconcile with eSewa first so we finalize instead of re-charging.
+  const lookup = await esewa.checkTransactionStatus(total.toString(), order.id);
+  if (lookup.status === 'COMPLETE') {
+    await orderRepository.finalizePaidEsewaOrder(order.id, userId, lookup.refId);
+    throw new AppError(409, 'This order has already been paid');
+  }
+
+  const fields = esewa.buildPaymentFields({
+    totalAmount: total.toString(),
+    transactionUuid: order.id,
+    successUrl: `${env.CLIENT_URL}/checkout/callback`,
+    failureUrl: `${env.CLIENT_URL}/checkout/callback?status=failure`,
+  });
+
+  return { orderId: order.id, formUrl: env.ESEWA_FORM_URL, fields };
+}
+
+export async function cancelPendingOrder(
+  userId: string,
+  orderId: string
+): Promise<OrderSummary> {
+  const order = await orderRepository.findByIdForUser(orderId, userId);
+  if (!order) {
+    throw new AppError(404, 'Order not found');
+  }
+  if (order.paymentStatus === 'PAID') {
+    throw new AppError(409, 'A paid order cannot be cancelled here');
+  }
+  if (order.status === 'CANCELLED') {
+    return toOrderSummary(order);
+  }
+  if (order.paymentMethod !== 'ESEWA' || order.paymentStatus !== 'PENDING') {
+    throw new AppError(409, 'This order cannot be cancelled');
+  }
+
+  const cancelled = await orderRepository.markPaymentFailed(order.id);
+  return toOrderSummary(cancelled);
+}
+
 export async function verifyEsewaPayment(
   userId: string,
   input: VerifyEsewaDto

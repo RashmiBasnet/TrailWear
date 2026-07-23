@@ -65,3 +65,29 @@ export const verifyEsewa = async (data: string) => {
         );
     }
 }
+
+export const resumeEsewa = async (id: string) => {
+    try {
+        const response = await axios.post(API.ORDER.ESEWA_RESUME(id));
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Failed to resume eSewa payment"
+        );
+    }
+}
+
+export const cancelOrder = async (id: string) => {
+    try {
+        const response = await axios.post(API.ORDER.CANCEL(id));
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Failed to cancel order"
+        );
+    }
+}

@@ -10,6 +10,7 @@ import {
     XCircle,
 } from "lucide-react";
 import { handleGetOrderById } from "@/lib/actions/order-action";
+import EsewaPendingActions from "./EsewaPendingActions";
 
 const formatPrice = (value: number) => `NRs. ${Number(value).toFixed(2)}`;
 
@@ -71,6 +72,10 @@ export default async function OrderDetailPage({
     const status = statusStyles[order.status] || statusStyles.CONFIRMED;
     const isCancelled = order.status === "CANCELLED";
     const justPlaced = placed === "1";
+    const awaitingEsewaPayment =
+        order.paymentMethod === "ESEWA" &&
+        order.paymentStatus === "PENDING" &&
+        !isCancelled;
 
     return (
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
@@ -122,6 +127,8 @@ export default async function OrderDetailPage({
                     </p>
                 </div>
             )}
+
+            {awaitingEsewaPayment && <EsewaPendingActions orderId={order.id} />}
 
             <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_340px]">
                 <section className="rounded-xl border border-border bg-white">

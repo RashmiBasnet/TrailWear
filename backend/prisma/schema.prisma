@@ -258,14 +258,30 @@ model OrderItem {
   size      String  @default("")
 }
 
+/**
+ * A customer's delivery address.
+ *
+ * `line1`, `line2` and `zip` are AES-256-GCM encrypted at rest: together they
+ * locate a specific person's home, which is the most sensitive data this system
+ * holds outside credentials. A dump of this table therefore yields no usable
+ * addresses without the key, which lives in the environment and not the database.
+ *
+ * `city` and `country` are stored in plaintext on purpose. Neither identifies an
+ * individual on its own, and keeping them queryable means shipping filters and
+ * per-region reporting stay ordinary SQL instead of decrypting every row in the
+ * application. Encrypting them would buy little and cost a lot.
+ *
+ * Ciphertext is longer than its input, so the encrypted columns hold roughly
+ * 100+ characters regardless of what the DTO caps the plaintext at.
+ */
 model Address {
   id      String  @id @default(cuid())
   userId  String
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  line1   String
-  line2   String?
+  line1   String // AES-256-GCM encrypted
+  line2   String? // AES-256-GCM encrypted
   city    String
   country String
-  zip     String
+  zip     String // AES-256-GCM encrypted
   orders  Order[]
 }

@@ -31,6 +31,22 @@ export async function initiateEsewa(req: Request, res: Response) {
   res.status(201).json({ success: true, data: payment });
 }
 
+export async function resumeEsewa(req: Request, res: Response) {
+  const payment = await orderService.resumeEsewaPayment(req.user!.id, req.params.id);
+  res.json({ success: true, data: payment });
+}
+
+export async function cancelOrder(req: Request, res: Response) {
+  const order = await orderService.cancelPendingOrder(req.user!.id, req.params.id);
+  await auditService.record(req, {
+    action: 'ORDER_CANCELLED',
+    entity: 'Order',
+    entityId: order.id,
+    metadata: { total: order.total, paymentMethod: order.paymentMethod },
+  });
+  res.json({ success: true, data: { order } });
+}
+
 export async function verifyEsewa(req: Request, res: Response) {
   const input = verifyEsewaSchema.parse(req.body);
   const order = await orderService.verifyEsewaPayment(req.user!.id, input);

@@ -9,6 +9,10 @@ build/
 .env
 .env.*
 
+# TLS certificates / private keys (local HTTPS via mkcert)
+certs/
+*.pem
+
 # Prisma generated client
 **/.prisma/
 **/generated/

@@ -1,7 +1,5 @@
 import type { NextConfig } from "next";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
-
 const isDev = process.env.NODE_ENV !== "production";
 
 const contentSecurityPolicy = [
@@ -33,14 +31,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
-  async rewrites() {
-    return [
-      {
-        source: "/uploads/:path*",
-        destination: `${API_BASE_URL}/uploads/:path*`,
-      },
-    ];
-  },
+  // Note: /uploads is served by app/uploads/[...path]/route.ts, not a rewrite —
+  // the rewrite proxy can't be given a CA to trust the API's local HTTPS cert,
+  // so images 404'd over TLS. The route handler fetches them with that CA.
   async headers() {
     return [
       {

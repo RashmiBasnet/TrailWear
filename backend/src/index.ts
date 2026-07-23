@@ -1,3 +1,6 @@
+import fs from 'fs';
+import http from 'http';
+import https from 'https';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -71,8 +74,31 @@ app.use((_req, res) => {
 
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
-  logger.info(`TrailWear API listening on http://localhost:${env.PORT}`, {
+/**
+ * Serves over HTTPS when a TLS key/cert pair is configured and readable, and
+ * falls back to HTTP otherwise, so a missing cert degrades rather than crashes.
+ * A cert that is set but unreadable is treated as a misconfiguration worth
+ * shouting about rather than silently downgrading.
+ */
+function createServer(): { server: http.Server; protocol: 'http' | 'https' } {
+  if (env.SSL_KEY_PATH && env.SSL_CERT_PATH) {
+    try {
+      const key = fs.readFileSync(env.SSL_KEY_PATH);
+      const cert = fs.readFileSync(env.SSL_CERT_PATH);
+      return { server: https.createServer({ key, cert }, app), protocol: 'https' };
+    } catch (err) {
+      logger.error('SSL_KEY_PATH/SSL_CERT_PATH are set but could not be read — serving HTTP', {
+        reason: err instanceof Error ? err.message : 'unknown',
+      });
+    }
+  }
+  return { server: http.createServer(app), protocol: 'http' };
+}
+
+const { server, protocol } = createServer();
+
+server.listen(env.PORT, () => {
+  logger.info(`TrailWear API listening on ${protocol}://localhost:${env.PORT}`, {
     env: env.NODE_ENV,
   });
 

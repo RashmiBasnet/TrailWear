@@ -13,6 +13,8 @@ router.get('/', asyncHandler(orderController.listOrders));
 router.post('/', orderLimiter, asyncHandler(orderController.createOrder));
 router.post('/esewa/initiate', orderLimiter, asyncHandler(orderController.initiateEsewa));
 router.post('/esewa/verify', orderLimiter, asyncHandler(orderController.verifyEsewa));
+router.post('/:id/esewa/resume', orderLimiter, asyncHandler(orderController.resumeEsewa));
+router.post('/:id/cancel', orderLimiter, asyncHandler(orderController.cancelOrder));
 router.get('/:id', asyncHandler(orderController.getOrder));
 
 export default router;
