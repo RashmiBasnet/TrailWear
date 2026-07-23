@@ -89,3 +89,22 @@ export const getAllUsers = async () => {
         );
     }
 }
+
+export const getAuditLogs = async (params?: {
+    action?: string;
+    entity?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+}) => {
+    try {
+        const response = await axios.get(API.ADMIN.AUDIT.GET_ALL(params));
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message
+            || err.message
+            || "Failed to fetch audit logs"
+        );
+    }
+}

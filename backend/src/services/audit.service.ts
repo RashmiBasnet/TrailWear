@@ -1,6 +1,9 @@
 import type { Request } from 'express';
+import type { Prisma } from '@prisma/client';
 import * as auditRepository from '../repositories/audit.repository';
 import { auditLogger, logger } from '../config/logger';
+import { toPublicAuditLog } from '../models/audit.model';
+import type { ListAuditQueryDto } from '../dtos/audit.dto';
 
 export type AuditAction =
   | 'CREATE'
@@ -25,6 +28,7 @@ export type AuditAction =
   | 'MFA_FAILED'
   | 'MFA_BACKUP_USED'
   | 'ORDER_PLACED'
+  | 'ORDER_CANCELLED'
   | 'PROFILE_UPDATED'
   | 'CAPTCHA_FAILED';
 
@@ -63,4 +67,32 @@ export async function record(req: Request, input: AuditInput): Promise<void> {
 
 export function listRecent(limit = 100) {
   return auditRepository.findRecent(limit);
+}
+
+export async function listAudit(query: ListAuditQueryDto) {
+  const where: Prisma.AuditLogWhereInput = {};
+
+  if (query.action) where.action = query.action;
+  if (query.entity) where.entity = query.entity;
+  if (query.search) {
+    where.OR = [
+      { entityId: { contains: query.search, mode: 'insensitive' } },
+      { ip: { contains: query.search, mode: 'insensitive' } },
+      { user: { email: { contains: query.search, mode: 'insensitive' } } },
+    ];
+  }
+
+  const { items, total } = await auditRepository.findPaginated({
+    where,
+    skip: (query.page - 1) * query.limit,
+    take: query.limit,
+  });
+
+  return {
+    items: items.map(toPublicAuditLog),
+    total,
+    page: query.page,
+    limit: query.limit,
+    totalPages: Math.max(1, Math.ceil(total / query.limit)),
+  };
 }

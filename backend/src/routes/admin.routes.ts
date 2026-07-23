@@ -26,5 +26,6 @@ router.patch(
 router.delete('/products/:id', asyncHandler(adminController.deleteProduct));
 router.post('/categories', asyncHandler(adminController.createCategory));
 router.get('/users', asyncHandler(adminController.listUsers));
+router.get('/audit', asyncHandler(adminController.listAudit));
 
 export default router;

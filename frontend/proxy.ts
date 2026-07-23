@@ -3,14 +3,21 @@ import type { NextRequest } from "next/server";
 
 const CSRF_COOKIE = "csrf_token";
 
-export function middleware(request: NextRequest) {
-    const response = NextResponse.next();
+export function proxy(request: NextRequest) {
+    const existing = request.cookies.get(CSRF_COOKIE)?.value;
+    let token = existing;
 
-    if (!request.cookies.get(CSRF_COOKIE)) {
+    if (!token) {
         const bytes = new Uint8Array(32);
         crypto.getRandomValues(bytes);
-        const token = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+        token = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+        // Make the new token visible to server components on THIS request
+        request.cookies.set(CSRF_COOKIE, token);
+    }
 
+    const response = NextResponse.next({ request });
+
+    if (!existing) {
         response.cookies.set({
             name: CSRF_COOKIE,
             value: token,

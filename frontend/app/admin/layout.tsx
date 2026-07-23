@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Tags, Users } from "lucide-react";
+import { LayoutDashboard, Package, ScrollText, Tags, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
     { name: "Products", href: "/admin/products", icon: Package },
     { name: "Categories", href: "/admin/categories", icon: Tags },
     { name: "Users", href: "/admin/users", icon: Users },
+    { name: "Audit log", href: "/admin/audit", icon: ScrollText },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -9,6 +9,7 @@ import {
   updateProductSchema,
 } from '../dtos/product.dto';
 import { createCategorySchema } from '../dtos/category.dto';
+import { listAuditQuerySchema } from '../dtos/audit.dto';
 
 export async function listProducts(req: Request, res: Response) {
   const query = listProductsQuerySchema.parse(req.query);
@@ -52,4 +53,10 @@ export async function createCategory(req: Request, res: Response) {
 export async function listUsers(_req: Request, res: Response) {
   const users = await adminService.listUsers();
   res.json({ success: true, data: { users } });
+}
+
+export async function listAudit(req: Request, res: Response) {
+  const query = listAuditQuerySchema.parse(req.query);
+  const result = await auditService.listAudit(query);
+  res.json({ success: true, data: result });
 }
