@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { stripHtml } from '../utils/sanitize';
 
 const COMMON_PASSWORDS = new Set([
   'password',
@@ -37,7 +38,7 @@ export const passwordSchema = z
 export const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: passwordSchema,
-  name: z.string().min(1, 'Name is required').max(100),
+  name: z.string().trim().min(1, 'Name is required').max(100).transform(stripHtml),
 });
 
 export const loginSchema = z.object({

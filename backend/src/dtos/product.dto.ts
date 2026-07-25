@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { stripHtml } from '../utils/sanitize';
 
 export const productGenderSchema = z.enum(['MEN', 'WOMEN', 'UNISEX']);
 
@@ -11,8 +12,8 @@ export const listProductsQuerySchema = z.object({
 });
 
 export const createProductSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(200),
-  description: z.string().min(1, 'Description is required'),
+  name: z.string().trim().min(1, 'Name is required').max(200).transform(stripHtml),
+  description: z.string().trim().min(1, 'Description is required'),
   gender: productGenderSchema.default('UNISEX'),
   sizes: z
     .union([z.array(z.string()), z.string()])
