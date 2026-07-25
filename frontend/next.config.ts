@@ -28,6 +28,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The production Docker image runs a custom HTTPS entrypoint (server-https.mjs)
+  // on top of the full `next` runtime, so no standalone bundle is needed.
   turbopack: {
     root: __dirname,
   },
