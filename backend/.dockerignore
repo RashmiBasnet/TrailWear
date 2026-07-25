@@ -1,0 +1,14 @@
+.env
+.env.*
+certs
+dist
+logs
+node_modules
+uploads
+coverage
+*.log
+*.tsbuildinfo
+.git
+.gitignore
+Dockerfile*
+README*

@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
 import { env } from './config/env';
+import { prisma } from './config/db';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimit';
@@ -43,6 +44,21 @@ app.use(
 app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
+
+// Readiness check used by Docker Compose and deployment platforms. Checking
+// PostgreSQL here prevents a process with a broken database connection from
+// being advertised as healthy.
+app.get('/api/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ success: true, status: 'ok' });
+  } catch (err) {
+    logger.error('Health check failed', {
+      reason: err instanceof Error ? err.message : 'unknown',
+    });
+    res.status(503).json({ success: false, status: 'unavailable' });
+  }
+});
 
 app.use('/api', apiLimiter);
 
@@ -128,3 +144,38 @@ server.listen(env.PORT, () => {
     }
   }
 });
+
+let shuttingDown = false;
+
+function shutdown(signal: NodeJS.Signals) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info(`Received ${signal}; shutting down`);
+
+  const forceExit = setTimeout(() => {
+    logger.error('Graceful shutdown timed out');
+    server.closeAllConnections();
+    process.exit(1);
+  }, 10_000);
+  forceExit.unref();
+
+  server.close(async (err) => {
+    clearTimeout(forceExit);
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectErr) {
+      logger.error('Failed to disconnect from PostgreSQL', {
+        reason: disconnectErr instanceof Error ? disconnectErr.message : 'unknown',
+      });
+    }
+
+    if (err) {
+      logger.error('HTTP server failed to close cleanly', { reason: err.message });
+      process.exit(1);
+    }
+    process.exit(0);
+  });
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

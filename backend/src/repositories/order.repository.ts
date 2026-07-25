@@ -35,14 +35,20 @@ export function createFromCart(
 ) {
   return prisma.$transaction(async (tx) => {
     for (const item of items) {
-      const product = await tx.product.findUnique({ where: { id: item.productId } });
-      if (!product || product.stock < item.quantity) {
-        throw new Error(`STOCK:${product?.name ?? 'Item'} is no longer available in that quantity`);
-      }
-      await tx.product.update({
-        where: { id: item.productId },
+      // Check and decrement in one atomic statement: subtract stock only if
+      // enough remains. A separate read-then-update would let two concurrent
+      // checkouts both pass the check and oversell the last units.
+      const { count } = await tx.product.updateMany({
+        where: { id: item.productId, stock: { gte: item.quantity } },
         data: { stock: { decrement: item.quantity } },
       });
+      if (count === 0) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+          select: { name: true },
+        });
+        throw new Error(`STOCK:${product?.name ?? 'Item'} is no longer available in that quantity`);
+      }
     }
 
     const order = await tx.order.create({
@@ -92,23 +98,33 @@ export function finalizePaidEsewaOrder(orderId: string, userId: string, refId: s
     }
 
     if (order.paymentStatus !== 'PAID') {
-      for (const item of order.items) {
-        const product = await tx.product.findUnique({ where: { id: item.productId } });
-        if (!product || product.stock < item.quantity) {
-          throw new Error(`STOCK:${product?.name ?? 'Item'} is no longer available in that quantity`);
-        }
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
-      }
-
-      await tx.order.update({
-        where: { id: orderId },
+      // Claim the order atomically: only the transaction that flips PENDING ->
+      // PAID (count === 1) goes on to decrement stock and clear the cart. A
+      // concurrent duplicate finalize matches 0 rows here and skips, so a single
+      // paid order can never decrement stock twice.
+      const claim = await tx.order.updateMany({
+        where: { id: orderId, paymentStatus: 'PENDING' },
         data: { paymentStatus: 'PAID', status: 'CONFIRMED', esewaRefId: refId },
       });
 
-      await tx.cartItem.deleteMany({ where: { cart: { userId } } });
+      if (claim.count === 1) {
+        for (const item of order.items) {
+          // Atomic check-and-decrement; see createFromCart for the reasoning.
+          const { count } = await tx.product.updateMany({
+            where: { id: item.productId, stock: { gte: item.quantity } },
+            data: { stock: { decrement: item.quantity } },
+          });
+          if (count === 0) {
+            const product = await tx.product.findUnique({
+              where: { id: item.productId },
+              select: { name: true },
+            });
+            throw new Error(`STOCK:${product?.name ?? 'Item'} is no longer available in that quantity`);
+          }
+        }
+
+        await tx.cartItem.deleteMany({ where: { cart: { userId } } });
+      }
     }
 
     return tx.order.findFirst({ where: { id: orderId }, include: ORDER_INCLUDE });

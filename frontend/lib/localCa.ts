@@ -1,5 +1,4 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import https from "https";
 
@@ -15,12 +14,16 @@ import https from "https";
  */
 export function localCaAgent(targetUrl: string): https.Agent | undefined {
     if (!targetUrl.startsWith("https")) return undefined;
-    const localAppData =
-        process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local");
     const caPath =
-        process.env.NODE_EXTRA_CA_CERTS || path.join(localAppData, "mkcert", "rootCA.pem");
+        process.env.NODE_EXTRA_CA_CERTS ||
+        (process.env.LOCALAPPDATA
+            ? path.join(process.env.LOCALAPPDATA, "mkcert", "rootCA.pem")
+            : undefined);
+    if (!caPath) return undefined;
     try {
-        return new https.Agent({ ca: fs.readFileSync(caPath) });
+        return new https.Agent({
+            ca: fs.readFileSync(/* turbopackIgnore: true */ caPath),
+        });
     } catch {
         return undefined;
     }

@@ -22,6 +22,10 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  LOG_TO_CONSOLE: z
+    .enum(['true', 'false'])
+    .transform((value) => value === 'true')
+    .default('false'),
   PORT: z.coerce.number().int().positive().default(5000),
   // Paths to a TLS key/cert pair (e.g. from mkcert). When BOTH are set and
   // readable the API is served over HTTPS; otherwise it falls back to HTTP.

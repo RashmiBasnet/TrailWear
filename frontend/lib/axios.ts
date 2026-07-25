@@ -2,7 +2,14 @@ import axios from "axios";
 import { getAuthToken, getMfaPendingToken, getOAuthStateToken } from "./cookie";
 import { localCaAgent } from "./localCa";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+// API calls in this application run in Next server actions/route handlers.
+// API_BASE_URL can therefore use the private Docker service hostname without
+// exposing it to the browser. NEXT_PUBLIC_API_BASE_URL remains as a fallback for
+// the existing non-Docker development setup.
+const BASE_URL =
+    process.env.API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "http://localhost:5000";
 
 const axiosInstance = axios.create(
     {

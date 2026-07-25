@@ -61,7 +61,8 @@ export const auditLogger = winston.createLogger({
   ],
 });
 
-if (env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({ format: readable }));
-  auditLogger.add(new winston.transports.Console({ format: readable }));
+if (env.LOG_TO_CONSOLE || env.NODE_ENV !== 'production') {
+  const consoleFormat = env.NODE_ENV === 'production' ? structured : readable;
+  logger.add(new winston.transports.Console({ format: consoleFormat }));
+  auditLogger.add(new winston.transports.Console({ format: consoleFormat }));
 }
