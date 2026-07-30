@@ -83,7 +83,22 @@ export async function resendVerification(req: Request, res: Response) {
 }
 
 export async function forgotPassword(req: Request, res: Response) {
-  const { email } = forgotPasswordSchema.parse(req.body);
+  const { email, captchaToken } = forgotPasswordSchema.parse(req.body);
+  const passed = await captchaService.verifyToken(captchaToken ?? '', req.ip);
+  if (!passed) {
+    await auditService.record(req, {
+      action: 'CAPTCHA_FAILED',
+      entity: 'Auth',
+      userId: null,
+      metadata: { email, operation: 'forgot-password' },
+    });
+    res.status(400).json({
+      success: false,
+      message: 'Please complete the captcha to continue.',
+    });
+    return;
+  }
+
   await passwordResetService.requestReset(email);
 
   await auditService.record(req, {

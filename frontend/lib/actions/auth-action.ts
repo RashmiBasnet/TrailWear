@@ -95,10 +95,14 @@ export const handleResendVerification = async (csrfToken: string, email: string)
     }
 }
 
-export const handleForgotPassword = async (csrfToken: string, email: string) => {
+export const handleForgotPassword = async (
+    csrfToken: string,
+    email: string,
+    captchaToken: string
+) => {
     try {
         await assertCsrf(csrfToken);
-        const result = await forgotPassword(email);
+        const result = await forgotPassword(email, captchaToken);
         return {
             success: true,
             message: result.message || "If that address has an account, a reset link is on its way."

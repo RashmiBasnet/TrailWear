@@ -96,9 +96,9 @@ export const resendVerification = async (email: string) => {
     }
 }
 
-export const forgotPassword = async (email: string) => {
+export const forgotPassword = async (email: string, captchaToken: string) => {
     try {
-        const response = await axios.post(API.AUTH.FORGOT_PASSWORD, { email });
+        const response = await axios.post(API.AUTH.FORGOT_PASSWORD, { email, captchaToken });
         return response.data;
     } catch (err: Error | any) {
         throw new Error(

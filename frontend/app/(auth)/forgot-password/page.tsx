@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
+import ReCAPTCHA from "react-google-recaptcha";
 import { AlertCircle, ArrowLeft, Mail, MailCheck } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { handleForgotPassword } from "@/lib/actions/auth-action";
 import { useCsrf } from "@/app/_components/CsrfProvider";
+
+const RECAPTCHA_SITE_KEY =
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
 
 export default function ForgotPasswordPage() {
     const toast = useToast();
@@ -14,6 +18,8 @@ export default function ForgotPasswordPage() {
     const [email, setEmail] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const captchaRef = useRef<ReCAPTCHA>(null);
 
     const [sent, setSent] = useState(false);
 
@@ -25,9 +31,13 @@ export default function ForgotPasswordPage() {
             setError("Please enter your email address.");
             return;
         }
+        if (!captchaToken) {
+            setError("Please complete the captcha below.");
+            return;
+        }
 
         setSubmitting(true);
-        const result = await handleForgotPassword(csrfToken, email.trim());
+        const result = await handleForgotPassword(csrfToken, email.trim(), captchaToken);
         setSubmitting(false);
 
         if (result.success) {
@@ -35,6 +45,8 @@ export default function ForgotPasswordPage() {
             return;
         }
 
+        captchaRef.current?.reset();
+        setCaptchaToken(null);
         setError(result.message);
         toast.error("Something went wrong", result.message);
     };
@@ -106,9 +118,16 @@ export default function ForgotPasswordPage() {
                     </div>
                 </div>
 
+                <ReCAPTCHA
+                    ref={captchaRef}
+                    sitekey={RECAPTCHA_SITE_KEY}
+                    onChange={(token) => setCaptchaToken(token)}
+                    onExpired={() => setCaptchaToken(null)}
+                />
+
                 <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || !captchaToken}
                     className="w-full rounded-full bg-navy-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-navy-700 disabled:opacity-60"
                 >
                     {submitting ? "Sending…" : "Send reset link"}

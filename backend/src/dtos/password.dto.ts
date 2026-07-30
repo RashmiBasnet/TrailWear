@@ -13,6 +13,7 @@ export const changePasswordSchema = z
 
 export const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address'),
+  captchaToken: z.string().optional(),
 });
 
 export const resetPasswordSchema = z.object({
