@@ -39,6 +39,7 @@ export const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: passwordSchema,
   name: z.string().trim().min(1, 'Name is required').max(100).transform(stripHtml),
+  captchaToken: z.string().optional(),
 });
 
 export const loginSchema = z.object({
@@ -60,6 +61,6 @@ export const resendVerificationSchema = z.object({
   email: z.string().email('Invalid email address'),
 });
 
-export type RegisterDto = z.infer<typeof registerSchema>;
+export type RegisterDto = Omit<z.infer<typeof registerSchema>, 'captchaToken'>;
 export type LoginDto = z.infer<typeof loginSchema>;
 export type GoogleCallbackDto = z.infer<typeof googleCallbackSchema>;

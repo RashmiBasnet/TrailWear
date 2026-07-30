@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ReCAPTCHA from "react-google-recaptcha";
 import { AlertCircle, Check, Eye, EyeOff, Lock, Mail, MailCheck, User, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -13,6 +14,9 @@ import PasswordStrengthMeter, {
 } from "@/app/_components/PasswordStrengthMeter";
 import GoogleButton from "@/app/_components/GoogleButton";
 import { useCsrf } from "@/app/_components/CsrfProvider";
+
+const RECAPTCHA_SITE_KEY =
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
 
 const PASSWORD_REQUIREMENTS = [
     { key: "length", label: "At least 8 characters", test: (pw: string) => pw.length >= 8 },
@@ -35,6 +39,8 @@ export default function SignupPage() {
     const [submitting, setSubmitting] = useState(false);
     const [redirecting, setRedirecting] = useState(false);
     const [error, setError] = useState("");
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const captchaRef = useRef<ReCAPTCHA>(null);
 
     const [sentTo, setSentTo] = useState("");
     const [resending, setResending] = useState(false);
@@ -71,9 +77,18 @@ export default function SignupPage() {
             toast.error("Passwords do not match", "Please re-enter the same password.");
             return;
         }
+        if (!captchaToken) {
+            setError("Please complete the captcha below.");
+            return;
+        }
 
         setSubmitting(true);
-        const result = await register({ name: name.trim(), email: email.trim(), password });
+        const result = await register({
+            name: name.trim(),
+            email: email.trim(),
+            password,
+            captchaToken,
+        });
         setSubmitting(false);
 
         if (result.success) {
@@ -87,6 +102,8 @@ export default function SignupPage() {
             toast.success("Account created", "Welcome to TrailWear.");
             router.replace(role === "ADMIN" ? "/admin" : "/");
         } else {
+            captchaRef.current?.reset();
+            setCaptchaToken(null);
             const message = result.message || "Registration failed.";
             setError(message);
             toast.error("Registration failed", message);
@@ -257,9 +274,16 @@ export default function SignupPage() {
                     </div>
                 </div>
 
+                <ReCAPTCHA
+                    ref={captchaRef}
+                    sitekey={RECAPTCHA_SITE_KEY}
+                    onChange={(token) => setCaptchaToken(token)}
+                    onExpired={() => setCaptchaToken(null)}
+                />
+
                 <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || !captchaToken}
                     className="w-full rounded-full bg-navy-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-navy-700 disabled:opacity-60"
                 >
                     {submitting ? "Creating account…" : "Create account"}

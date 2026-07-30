@@ -29,7 +29,22 @@ import {
 } from '../utils/jwt';
 
 export async function register(req: Request, res: Response) {
-  const input = registerSchema.parse(req.body);
+  const { captchaToken, ...input } = registerSchema.parse(req.body);
+  const passed = await captchaService.verifyToken(captchaToken ?? '', req.ip);
+  if (!passed) {
+    await auditService.record(req, {
+      action: 'CAPTCHA_FAILED',
+      entity: 'Auth',
+      userId: null,
+      metadata: { email: input.email, operation: 'register' },
+    });
+    res.status(400).json({
+      success: false,
+      message: 'Please complete the captcha to continue.',
+    });
+    return;
+  }
+
   const { tokenVersion, emailVerified, ...user } = await authService.register(input);
 
   await auditService.record(req, { action: 'REGISTER', entity: 'Auth', userId: user.id });
