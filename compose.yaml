@@ -68,6 +68,8 @@ services:
       target: runner
     restart: unless-stopped
     init: true
+    env_file:
+      - ./backend/.env
     environment:
       NODE_ENV: production
       LOG_TO_CONSOLE: "true"
@@ -87,9 +89,6 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-https://localhost:3000/api/auth/google/callback}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-}
       ESEWA_SECRET_KEY: ${ESEWA_SECRET_KEY:-8gBm/:&EnhH.1/q}
       ESEWA_PRODUCT_CODE: ${ESEWA_PRODUCT_CODE:-EPAYTEST}
       ESEWA_FORM_URL: ${ESEWA_FORM_URL:-https://rc-epay.esewa.com.np/api/epay/main/v2/form}
