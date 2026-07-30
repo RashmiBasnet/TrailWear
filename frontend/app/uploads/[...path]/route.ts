@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import axios from "axios";
+import { localCaAgent } from "@/lib/localCa";
 
 export const dynamic = "force-dynamic";
 
@@ -28,24 +30,35 @@ export async function GET(_request: Request, context: RouteContext) {
     const target = `${API_BASE_URL.replace(/\/+$/, "")}/uploads/${uploadPath}`;
 
     try {
-        const upstream = await fetch(target, { cache: "no-store" });
-        if (!upstream.ok || !upstream.body) {
+        const upstream = await axios.get<ArrayBuffer>(target, {
+            responseType: "arraybuffer",
+            httpsAgent: localCaAgent(target),
+            validateStatus: () => true,
+        });
+
+        if (upstream.status < 200 || upstream.status >= 300) {
             return new NextResponse(null, { status: upstream.status });
         }
 
         const headers = new Headers();
         for (const name of ["content-type", "content-length", "etag", "last-modified"]) {
-            const value = upstream.headers.get(name);
-            if (value) headers.set(name, value);
+            const value = upstream.headers[name];
+            if (value !== undefined) headers.set(name, String(value));
         }
         headers.set("Cache-Control", "public, max-age=3600");
         headers.set("X-Content-Type-Options", "nosniff");
 
-        return new NextResponse(upstream.body, {
+        return new NextResponse(upstream.data, {
             status: upstream.status,
             headers,
         });
-    } catch {
+    } catch (error) {
+        console.error(
+            "Failed to proxy uploaded image",
+            axios.isAxiosError(error)
+                ? { code: error.code, message: error.message }
+                : error
+        );
         return NextResponse.json(
             { success: false, message: "Upload service unavailable" },
             { status: 502 }

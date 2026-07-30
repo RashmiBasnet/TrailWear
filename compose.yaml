@@ -28,6 +28,40 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # One-off: creates the premade admin once the schema is in place. Reuses the
+  # runner image (which already holds the compiled dist and argon2), overrides
+  # the command, and reads credentials from backend/.env. The DATABASE_URL there
+  # points at the host's local Postgres, so it is overridden to reach the `db`
+  # service on the compose network. Idempotent, so it is safe on every `up`.
+  seed-admin:
+    build:
+      context: ./backend
+      target: runner
+    command: ["node", "dist/scripts/seedAdmin.js"]
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-trailwear}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-trailwear}?schema=public
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  # One-off: creates the premade customer accounts. Same setup as seed-admin.
+  seed-users:
+    build:
+      context: ./backend
+      target: runner
+    command: ["node", "dist/scripts/seedUsers.js"]
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-trailwear}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-trailwear}?schema=public
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
   backend:
     build:
       context: ./backend
