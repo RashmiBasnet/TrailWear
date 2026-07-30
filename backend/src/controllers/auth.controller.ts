@@ -141,10 +141,9 @@ export async function login(req: Request, res: Response) {
         metadata: { email: input.email },
       });
 
-      res.status(err.statusCode).json({
+      res.status(unverified ? 401 : err.statusCode).json({
         success: false,
-        message: err.message,
-        ...(unverified ? { data: { emailVerificationRequired: true } } : {}),
+        message: unverified ? 'Invalid email or password' : err.message,
       });
       return;
     }
