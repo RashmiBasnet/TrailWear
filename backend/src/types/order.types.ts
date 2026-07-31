@@ -12,6 +12,8 @@ export interface OrderItemWithProduct {
 export interface OrderSummary {
   id: string;
   status: 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+  paymentMethod: 'COD' | 'ESEWA';
+  paymentStatus: 'PENDING' | 'PAID' | 'FAILED';
   total: number;
   createdAt: Date;
   address: Address | null;

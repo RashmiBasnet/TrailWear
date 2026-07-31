@@ -1,36 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Check, Eye, EyeOff, Lock, Mail, User, X } from "lucide-react";
+import ReCAPTCHA from "react-google-recaptcha";
+import { AlertCircle, Check, Eye, EyeOff, Lock, Mail, MailCheck, User, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { handleResendVerification } from "@/lib/actions/auth-action";
+import PasswordStrengthMeter, {
+    MINIMUM_SCORE,
+    scorePassword,
+} from "@/app/_components/PasswordStrengthMeter";
+import GoogleButton from "@/app/_components/GoogleButton";
+import { useCsrf } from "@/app/_components/CsrfProvider";
+
+const RECAPTCHA_SITE_KEY =
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
 
 const PASSWORD_REQUIREMENTS = [
     { key: "length", label: "At least 8 characters", test: (pw: string) => pw.length >= 8 },
     { key: "case", label: "Upper & lowercase letters", test: (pw: string) => /[a-z]/.test(pw) && /[A-Z]/.test(pw) },
     { key: "number", label: "At least one number", test: (pw: string) => /\d/.test(pw) },
-    { key: "special", label: "At least one special character", test: (pw: string) => /[^A-Za-z0-9]/.test(pw) },
 ];
-
-const STRENGTH_LEVELS = [
-    { label: "Weak", barColor: "bg-danger", textColor: "text-danger" },
-    { label: "Fair", barColor: "bg-gold-500", textColor: "text-gold-600" },
-    { label: "Good", barColor: "bg-gold-400", textColor: "text-gold-700" },
-    { label: "Strong", barColor: "bg-success", textColor: "text-success" },
-];
-
-function getPasswordStrength(password: string) {
-    const metCount = PASSWORD_REQUIREMENTS.filter((req) => req.test(password)).length;
-    const level = STRENGTH_LEVELS[Math.max(metCount - 1, 0)];
-    return { score: metCount, isStrong: metCount === PASSWORD_REQUIREMENTS.length, ...level };
-}
 
 export default function SignupPage() {
     const { user, loading, register } = useAuth();
     const toast = useToast();
     const router = useRouter();
+    const csrfToken = useCsrf();
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -41,8 +39,19 @@ export default function SignupPage() {
     const [submitting, setSubmitting] = useState(false);
     const [redirecting, setRedirecting] = useState(false);
     const [error, setError] = useState("");
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const captchaRef = useRef<ReCAPTCHA>(null);
 
-    const strength = getPasswordStrength(password);
+    const [sentTo, setSentTo] = useState("");
+    const [resending, setResending] = useState(false);
+
+    const userInputs = useMemo(() => [name, email, "trailwear"], [name, email]);
+    const strengthScore = useMemo(
+        () => scorePassword(password, userInputs)?.score ?? 0,
+        [password, userInputs]
+    );
+    const meetsRules = PASSWORD_REQUIREMENTS.every((req) => req.test(password));
+    const isStrong = meetsRules && strengthScore >= MINIMUM_SCORE;
 
     useEffect(() => {
         if (loading || !user || redirecting) return;
@@ -58,9 +67,9 @@ export default function SignupPage() {
             toast.error("Missing signup details", "Please fill in all fields.");
             return;
         }
-        if (!strength.isStrong) {
-            setError("Password must meet all the strength requirements below.");
-            toast.error("Password is too weak", "Please meet all password requirements.");
+        if (!isStrong) {
+            setError("Please choose a stronger password — see the guidance below.");
+            toast.error("Password is too weak", "Choose a longer or less predictable password.");
             return;
         }
         if (password !== confirmPassword) {
@@ -68,22 +77,82 @@ export default function SignupPage() {
             toast.error("Passwords do not match", "Please re-enter the same password.");
             return;
         }
+        if (!captchaToken) {
+            setError("Please complete the captcha below.");
+            return;
+        }
 
         setSubmitting(true);
-        const result = await register({ name: name.trim(), email: email.trim(), password });
+        const result = await register({
+            name: name.trim(),
+            email: email.trim(),
+            password,
+            captchaToken,
+        });
         setSubmitting(false);
 
         if (result.success) {
+            if (result.data?.emailVerificationRequired) {
+                setSentTo(email.trim());
+                return;
+            }
+
             const role = result.data?.user?.role;
             setRedirecting(true);
             toast.success("Account created", "Welcome to TrailWear.");
             router.replace(role === "ADMIN" ? "/admin" : "/");
         } else {
+            captchaRef.current?.reset();
+            setCaptchaToken(null);
             const message = result.message || "Registration failed.";
             setError(message);
             toast.error("Registration failed", message);
         }
     };
+
+    const onResend = async () => {
+        setResending(true);
+        const result = await handleResendVerification(csrfToken, sentTo);
+        setResending(false);
+        toast.success("Check your inbox", result.message);
+    };
+
+    if (sentTo) {
+        return (
+            <div className="w-full max-w-md">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-navy-50">
+                    <MailCheck className="h-6 w-6 text-navy-600" />
+                </span>
+                <h1 className="mt-4 text-3xl font-bold tracking-tight text-navy-800">
+                    Check your email
+                </h1>
+                <p className="mt-2 text-sm text-navy-400">
+                    We sent a verification link to{" "}
+                    <span className="font-medium text-navy-700">{sentTo}</span>. Open it to
+                    finish setting up your account — you&apos;ll need to verify before you can log in.
+                </p>
+                <p className="mt-4 text-xs text-navy-300">
+                    The link expires in 24 hours and can only be used once. If it hasn&apos;t
+                    arrived in a minute or two, check your spam folder.
+                </p>
+
+                <button
+                    type="button"
+                    onClick={onResend}
+                    disabled={resending}
+                    className="mt-8 w-full rounded-full border border-border bg-white px-6 py-3 text-sm font-semibold text-navy-800 transition hover:bg-navy-50 disabled:opacity-60"
+                >
+                    {resending ? "Sending…" : "Resend the link"}
+                </button>
+
+                <p className="mt-8 text-center text-sm text-navy-400">
+                    <Link href="/login" className="font-semibold text-navy-700 hover:text-navy-900 hover:underline">
+                        Back to login
+                    </Link>
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-md">
@@ -160,18 +229,7 @@ export default function SignupPage() {
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                     </div>
-                    {password && (
-                        <div className="mt-2 flex gap-1">
-                            {STRENGTH_LEVELS.map((level, i) => (
-                                <span
-                                    key={level.label}
-                                    className={`h-1.5 flex-1 rounded-full transition-colors ${
-                                        i < strength.score ? strength.barColor : "bg-navy-100"
-                                    }`}
-                                />
-                            ))}
-                        </div>
-                    )}
+                    <PasswordStrengthMeter password={password} userInputs={userInputs} />
                     <ul className="mt-2 space-y-1">
                         {PASSWORD_REQUIREMENTS.map((req) => {
                             const met = req.test(password);
@@ -216,14 +274,30 @@ export default function SignupPage() {
                     </div>
                 </div>
 
+                <ReCAPTCHA
+                    ref={captchaRef}
+                    sitekey={RECAPTCHA_SITE_KEY}
+                    onChange={(token) => setCaptchaToken(token)}
+                    onExpired={() => setCaptchaToken(null)}
+                />
+
                 <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || !captchaToken}
                     className="w-full rounded-full bg-navy-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-navy-700 disabled:opacity-60"
                 >
                     {submitting ? "Creating account…" : "Create account"}
                 </button>
             </form>
+
+            <div className="my-6 flex items-center gap-4">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium uppercase tracking-wide text-navy-300">or</span>
+                <span className="h-px flex-1 bg-border" />
+            </div>
+
+            {}
+            <GoogleButton label="Sign up with Google" />
 
             <p className="mt-8 text-center text-sm text-navy-400">
                 Already have an account?{" "}

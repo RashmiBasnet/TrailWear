@@ -6,6 +6,7 @@ import { Upload, X } from "lucide-react";
 import { handleCreateProduct, handleUpdateProduct } from "@/lib/actions/admin-action";
 import { handleGetAllCategories } from "@/lib/actions/category-action";
 import { useToast } from "@/context/ToastContext";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const genderOptions = [
     { value: "UNISEX", label: "Unisex" },
@@ -16,6 +17,7 @@ const genderOptions = [
 export default function AdminProductForm({ product }: { product?: any }) {
     const router = useRouter();
     const toast = useToast();
+    const csrfToken = useCsrf();
     const isEdit = Boolean(product);
 
     const [categories, setCategories] = useState<any[]>([]);
@@ -77,8 +79,8 @@ export default function AdminProductForm({ product }: { product?: any }) {
 
         setSubmitting(true);
         const result = isEdit
-            ? await handleUpdateProduct(product.id, formData)
-            : await handleCreateProduct(formData);
+            ? await handleUpdateProduct(csrfToken, product.id, formData)
+            : await handleCreateProduct(csrfToken, formData);
         setSubmitting(false);
 
         if (result.success) {

@@ -1,9 +1,11 @@
 "use server";
+import { assertCsrf } from "../csrf";
 
-import { createOrder, getOrders, getOrderById } from "../order";
+import { createOrder, getOrders, getOrderById, initiateEsewa, verifyEsewa, resumeEsewa, cancelOrder } from "../order";
 
-export const handleCreateOrder = async (orderData: any) => {
+export const handleCreateOrder = async (csrfToken: string, orderData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await createOrder(orderData);
         if (result.success) {
             return {
@@ -67,6 +69,102 @@ export const handleGetOrderById = async (id: string) => {
         return {
             success: false,
             message: err.message || "Failed to fetch order"
+        };
+    }
+}
+
+export const handleInitiateEsewa = async (csrfToken: string, orderData: any) => {
+    try {
+        await assertCsrf(csrfToken);
+        const result = await initiateEsewa(orderData);
+        if (result.success) {
+            return {
+                success: true,
+                data: result.data,
+                message: "eSewa payment started"
+            };
+        }
+        return {
+            success: false,
+            message: result.message || "Failed to start eSewa payment"
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE INITIATE ESEWA ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Failed to start eSewa payment"
+        };
+    }
+}
+
+export const handleResumeEsewa = async (csrfToken: string, id: string) => {
+    try {
+        await assertCsrf(csrfToken);
+        const result = await resumeEsewa(id);
+        if (result.success) {
+            return {
+                success: true,
+                data: result.data,
+                message: "eSewa payment resumed"
+            };
+        }
+        return {
+            success: false,
+            message: result.message || "Failed to resume eSewa payment"
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE RESUME ESEWA ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Failed to resume eSewa payment"
+        };
+    }
+}
+
+export const handleCancelOrder = async (csrfToken: string, id: string) => {
+    try {
+        await assertCsrf(csrfToken);
+        const result = await cancelOrder(id);
+        if (result.success) {
+            return {
+                success: true,
+                data: result.data,
+                message: "Order cancelled"
+            };
+        }
+        return {
+            success: false,
+            message: result.message || "Failed to cancel order"
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE CANCEL ORDER ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Failed to cancel order"
+        };
+    }
+}
+
+export const handleVerifyEsewa = async (csrfToken: string, data: string) => {
+    try {
+        await assertCsrf(csrfToken);
+        const result = await verifyEsewa(data);
+        if (result.success) {
+            return {
+                success: true,
+                data: result.data,
+                message: "Payment verified"
+            };
+        }
+        return {
+            success: false,
+            message: result.message || "Failed to verify eSewa payment"
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE VERIFY ESEWA ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Failed to verify eSewa payment"
         };
     }
 }

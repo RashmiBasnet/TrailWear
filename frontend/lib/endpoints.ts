@@ -4,6 +4,22 @@ export const API = {
     LOGIN: "/api/auth/login",
     LOGOUT: "/api/auth/logout",
     ME: "/api/auth/me",
+    VERIFY_EMAIL: "/api/auth/verify-email",
+    RESEND_VERIFICATION: "/api/auth/resend-verification",
+    FORGOT_PASSWORD: "/api/auth/forgot-password",
+    RESET_PASSWORD: "/api/auth/reset-password",
+    GOOGLE: {
+      START: "/api/auth/google/start",
+      CALLBACK: "/api/auth/google/callback",
+    },
+    MFA: {
+      STATUS: "/api/auth/mfa/status",
+      SETUP: "/api/auth/mfa/setup",
+      ENABLE: "/api/auth/mfa/enable",
+      DISABLE: "/api/auth/mfa/disable",
+      VERIFY: "/api/auth/mfa/verify",
+      BACKUP: "/api/auth/mfa/backup",
+    },
   },
   PRODUCT: {
     GET_ALL: (
@@ -49,6 +65,8 @@ export const API = {
   PROFILE: {
     GET: "/api/profile",
     UPDATE: "/api/profile",
+    PASSWORD_STATUS: "/api/profile/password",
+    CHANGE_PASSWORD: "/api/profile/password",
     ADD_ADDRESS: "/api/profile/address",
     GET_ADDRESSES: "/api/profile/address",
   },
@@ -56,6 +74,10 @@ export const API = {
     CREATE: "/api/orders",
     GET_ALL: "/api/orders",
     GET_BY_ID: (id: string) => `/api/orders/${id}`,
+    ESEWA_INITIATE: "/api/orders/esewa/initiate",
+    ESEWA_VERIFY: "/api/orders/esewa/verify",
+    ESEWA_RESUME: (id: string) => `/api/orders/${id}/esewa/resume`,
+    CANCEL: (id: string) => `/api/orders/${id}/cancel`,
   },
   ADMIN: {
     PRODUCT: {
@@ -90,6 +112,30 @@ export const API = {
     },
     USER: {
       GET_ALL: "/api/admin/users",
+    },
+    AUDIT: {
+      GET_ALL: (
+        params?: {
+          action?: string;
+          entity?: string;
+          search?: string;
+          page?: number;
+          limit?: number;
+        }
+      ) => {
+        if (!params) return "/api/admin/audit";
+
+        const q = new URLSearchParams();
+
+        if (params.action) q.set("action", params.action);
+        if (params.entity) q.set("entity", params.entity);
+        if (params.search) q.set("search", params.search);
+        if (params.page !== undefined) q.set("page", String(params.page));
+        if (params.limit !== undefined) q.set("limit", String(params.limit));
+
+        const query = q.toString();
+        return query ? `/api/admin/audit?${query}` : "/api/admin/audit";
+      },
     },
   },
 };

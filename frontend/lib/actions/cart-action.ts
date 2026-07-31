@@ -1,4 +1,5 @@
 "use server";
+import { assertCsrf } from "../csrf";
 
 import { getCart, addCartItem, updateCartItem, removeCartItem, clearCart } from "../cart";
 
@@ -25,8 +26,9 @@ export const handleGetCart = async () => {
     }
 }
 
-export const handleAddCartItem = async (cartData: any) => {
+export const handleAddCartItem = async (csrfToken: string, cartData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await addCartItem(cartData);
         if (result.success) {
             return {
@@ -48,8 +50,9 @@ export const handleAddCartItem = async (cartData: any) => {
     }
 }
 
-export const handleUpdateCartItem = async (itemId: string, updateData: any) => {
+export const handleUpdateCartItem = async (csrfToken: string, itemId: string, updateData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await updateCartItem(itemId, updateData);
         if (result.success) {
             return {
@@ -71,8 +74,9 @@ export const handleUpdateCartItem = async (itemId: string, updateData: any) => {
     }
 }
 
-export const handleRemoveCartItem = async (itemId: string) => {
+export const handleRemoveCartItem = async (csrfToken: string, itemId: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await removeCartItem(itemId);
         if (result.success) {
             return {
@@ -94,8 +98,9 @@ export const handleRemoveCartItem = async (itemId: string) => {
     }
 }
 
-export const handleClearCart = async () => {
+export const handleClearCart = async (csrfToken: string) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await clearCart();
         if (result.success) {
             return {

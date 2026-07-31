@@ -1,14 +1,20 @@
 import { Router } from 'express';
 import * as orderController from '../controllers/order.controller';
 import { requireAuth } from '../middleware/requireAuth';
+import { requireFreshPassword } from '../middleware/requireFreshPassword';
+import { orderLimiter } from '../middleware/rateLimit';
 import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-router.use(requireAuth);
+router.use(requireAuth, requireFreshPassword);
 
 router.get('/', asyncHandler(orderController.listOrders));
+router.post('/', orderLimiter, asyncHandler(orderController.createOrder));
+router.post('/esewa/initiate', orderLimiter, asyncHandler(orderController.initiateEsewa));
+router.post('/esewa/verify', orderLimiter, asyncHandler(orderController.verifyEsewa));
+router.post('/:id/esewa/resume', orderLimiter, asyncHandler(orderController.resumeEsewa));
+router.post('/:id/cancel', orderLimiter, asyncHandler(orderController.cancelOrder));
 router.get('/:id', asyncHandler(orderController.getOrder));
-router.post('/', asyncHandler(orderController.createOrder));
 
 export default router;

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, Heart, ShoppingCart, User, LogOut, Shield, ChevronDown } from "lucide-react";
+import { Search, Heart, ShoppingCart, User, LogOut, Shield, ChevronDown, Package } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCart } from "@/context/CartContext";
@@ -126,6 +126,9 @@ export default function Navbar() {
                     {!loading && (
                         user ? (
                             <div className="flex items-center gap-3">
+                                <Link href="/orders" aria-label="My orders" className="hover:text-navy-800">
+                                    <Package className="h-5 w-5" />
+                                </Link>
                                 <Link href="/profile" className="flex items-center gap-1.5 text-sm font-medium hover:text-navy-800">
                                     <User className="h-5 w-5" />
                                     <span className="hidden sm:inline">{user.name.split(" ")[0]}</span>

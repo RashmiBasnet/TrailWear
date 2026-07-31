@@ -8,18 +8,139 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
+  id    String @id @default(cuid())
+  email String @unique
+
+  // Null for accounts that only ever signed in with Google — they have no
+  // password to hash. Anything reading this must handle absence rather than
+  // assume a hash is there.
+  password String?
+
+  // Google's `sub` claim: stable for the life of the account and never reused,
+  // unlike the email, which a user can change. Unique, so one Google account
+  // cannot be attached to two users.
+  googleId String? @unique
+
+  // Whether ownership of `email` has actually been proven — by clicking a
+  // verification link, or by Google asserting email_verified. Registration alone
+  // proves nothing: anyone can type someone else's address.
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+
   name      String
   role      Role     @default(CUSTOMER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Bumped on logout/password change so previously issued JWTs stop validating.
+  tokenVersion Int @default(0)
+
+  // Brute-force lockout state.
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  // Password lifecycle. Set on registration and every change, so expiry can be
+  // measured and reuse of recent passwords blocked.
+  passwordChangedAt DateTime          @default(now())
+  passwordHistory   PasswordHistory[]
+
+  // Multi-factor authentication (TOTP, RFC 6238).
+  mfaEnabled     Boolean  @default(false)
+  mfaSecret      String? // AES-256-GCM encrypted; never stored in plaintext
+  mfaBackupCodes String[] @default([]) // argon2 hashes, single use
+  mfaLastUsedStep Int? // last accepted time step, blocks code replay
+
   cart      Cart?
   wishlist  WishlistItem[]
   orders    Order[]
   addresses Address[]
+  auditLogs AuditLog[]
+}
+
+/**
+ * Argon2 hashes of a user's previous passwords, so a new password can be
+ * checked against them. Only hashes are kept — never the passwords themselves.
+ */
+model PasswordHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hash      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/**
+ * Pending email-verification links.
+ *
+ * Only a SHA-256 hash of the token is stored, never the token itself: the
+ * emailed link is a credential, and a leaked database should not hand out
+ * working links. Plain SHA-256 rather than argon2 is deliberate — the token is
+ * 32 random bytes, so there is nothing to brute-force and a slow hash would only
+ * cost latency on every verification.
+ */
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  // Set on first use. Kept rather than deleted so a replayed link can be told
+  // apart from one that never existed.
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/**
+ * Pending password-reset links.
+ *
+ * Stored exactly like EmailVerificationToken and for the same reasons: only a
+ * SHA-256 hash of the 32-byte random token is kept, so a leaked database hands
+ * out no working links, and plain SHA-256 is enough because a 32-byte random
+ * value has nothing to brute-force. The link is a bearer credential — whoever
+ * holds it can set a new password — so it is short-lived and single use.
+ */
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  // Set on first use, kept rather than deleted so a replayed link can be told
+  // apart from one that never existed.
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  // Nullable: security events can happen without a known account, e.g. a failed
+  // login for an email that does not exist. Those still need recording.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  action   String
+  entity   String
+  entityId String?
+  ip       String?
+
+  // Extra context (attempted email, failure reason). Never secrets.
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([entity, entityId])
+  @@index([action, createdAt])
 }
 
 enum Role {
@@ -92,16 +213,19 @@ model WishlistItem {
 }
 
 model Order {
-  id        String      @id @default(cuid())
-  userId    String
-  user      User        @relation(fields: [userId], references: [id])
-  status    OrderStatus @default(PENDING)
-  total     Decimal     @db.Decimal(10, 2)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  items     OrderItem[]
-  address   Address?    @relation(fields: [addressId], references: [id])
-  addressId String?
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod @default(COD)
+  paymentStatus PaymentStatus @default(PENDING)
+  esewaRefId    String?
+  total         Decimal       @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         OrderItem[]
+  address       Address?      @relation(fields: [addressId], references: [id])
+  addressId     String?
 }
 
 enum OrderStatus {
@@ -110,6 +234,17 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  ESEWA
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
 }
 
 model OrderItem {
@@ -123,14 +258,30 @@ model OrderItem {
   size      String  @default("")
 }
 
+/**
+ * A customer's delivery address.
+ *
+ * `line1`, `line2` and `zip` are AES-256-GCM encrypted at rest: together they
+ * locate a specific person's home, which is the most sensitive data this system
+ * holds outside credentials. A dump of this table therefore yields no usable
+ * addresses without the key, which lives in the environment and not the database.
+ *
+ * `city` and `country` are stored in plaintext on purpose. Neither identifies an
+ * individual on its own, and keeping them queryable means shipping filters and
+ * per-region reporting stay ordinary SQL instead of decrypting every row in the
+ * application. Encrypting them would buy little and cost a lot.
+ *
+ * Ciphertext is longer than its input, so the encrypted columns hold roughly
+ * 100+ characters regardless of what the DTO caps the plaintext at.
+ */
 model Address {
   id      String  @id @default(cuid())
   userId  String
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  line1   String
-  line2   String?
+  line1   String // AES-256-GCM encrypted
+  line2   String? // AES-256-GCM encrypted
   city    String
   country String
-  zip     String
+  zip     String // AES-256-GCM encrypted
   orders  Order[]
 }

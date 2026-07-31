@@ -24,6 +24,8 @@ export function toOrderSummary(order: PrismaOrderWithRelations): OrderSummary {
   return {
     id: order.id,
     status: order.status,
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
     total: Number(order.total),
     createdAt: order.createdAt,
     address: order.address ? toAddress(order.address) : null,

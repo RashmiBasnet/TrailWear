@@ -1,9 +1,20 @@
 "use server";
 
-import { registerUser, loginUser, logoutUser, getMe } from "../auth";
+import {
+    registerUser,
+    loginUser,
+    logoutUser,
+    getMe,
+    verifyEmail,
+    resendVerification,
+    forgotPassword,
+    resetPassword,
+} from "../auth";
+import { assertCsrf } from "../csrf";
 
-export const handleRegister = async (formData: any) => {
+export const handleRegister = async (csrfToken: string, formData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await registerUser(formData);
         if (result.success) {
             return {
@@ -25,8 +36,9 @@ export const handleRegister = async (formData: any) => {
     }
 }
 
-export const handleLogin = async (formData: any) => {
+export const handleLogin = async (csrfToken: string, formData: any) => {
     try {
+        await assertCsrf(csrfToken);
         const result = await loginUser(formData);
         if (result.success) {
             return {
@@ -43,13 +55,91 @@ export const handleLogin = async (formData: any) => {
         console.log("HANDLE LOGIN ERROR:", err.message);
         return {
             success: false,
-            message: err.message || "Login Failed"
+            message: err.message || "Login Failed",
+            emailVerificationRequired: err.emailVerificationRequired === true
         };
     }
 }
 
-export const handleLogout = async () => {
+export const handleVerifyEmail = async (csrfToken: string, token: string) => {
     try {
+        await assertCsrf(csrfToken);
+        const result = await verifyEmail(token);
+        return {
+            success: true,
+            message: result.message || "Email verified"
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE VERIFY EMAIL ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Verification failed"
+        };
+    }
+}
+
+export const handleResendVerification = async (csrfToken: string, email: string) => {
+    try {
+        await assertCsrf(csrfToken);
+        const result = await resendVerification(email);
+        return {
+            success: true,
+            message: result.message || "Verification email sent"
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE RESEND VERIFICATION ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Could not resend the verification email"
+        };
+    }
+}
+
+export const handleForgotPassword = async (
+    csrfToken: string,
+    email: string,
+    captchaToken: string
+) => {
+    try {
+        await assertCsrf(csrfToken);
+        const result = await forgotPassword(email, captchaToken);
+        return {
+            success: true,
+            message: result.message || "If that address has an account, a reset link is on its way."
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE FORGOT PASSWORD ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Could not send the reset email"
+        };
+    }
+}
+
+export const handleResetPassword = async (
+    csrfToken: string,
+    token: string,
+    newPassword: string
+) => {
+    try {
+        await assertCsrf(csrfToken);
+        const result = await resetPassword(token, newPassword);
+        return {
+            success: true,
+            message: result.message || "Your password has been reset."
+        };
+    } catch (err: Error | any) {
+        console.log("HANDLE RESET PASSWORD ERROR:", err.message);
+        return {
+            success: false,
+            message: err.message || "Could not reset your password"
+        };
+    }
+}
+
+export const handleLogout = async (csrfToken: string) => {
+    try {
+        await assertCsrf(csrfToken);
         const result = await logoutUser();
         if (result.success) {
             return {

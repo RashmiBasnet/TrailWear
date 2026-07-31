@@ -3,7 +3,10 @@ import * as cartRepository from '../repositories/cart.repository';
 import * as addressRepository from '../repositories/address.repository';
 import { toOrderSummary } from '../models/order.model';
 import { AppError } from '../utils/AppError';
-import type { CreateOrderDto } from '../dtos/order.dto';
+import { env } from '../config/env';
+import * as esewa from '../utils/esewa';
+import type { EsewaCallbackData, EsewaFormFields } from '../utils/esewa';
+import type { CreateOrderDto, VerifyEsewaDto } from '../dtos/order.dto';
 import type { OrderSummary } from '../types/order.types';
 
 export async function listOrders(userId: string): Promise<OrderSummary[]> {
@@ -19,11 +22,8 @@ export async function getOrder(userId: string, orderId: string): Promise<OrderSu
   return toOrderSummary(order);
 }
 
-export async function createOrder(
-  userId: string,
-  input: CreateOrderDto
-): Promise<OrderSummary> {
-  const address = await addressRepository.findByIdForUser(input.addressId, userId);
+async function prepareOrder(userId: string, addressId: string) {
+  const address = await addressRepository.findByIdForUser(addressId, userId);
   if (!address) {
     throw new AppError(400, 'Delivery address not found');
   }
@@ -45,16 +45,144 @@ export async function createOrder(
     price: Number(item.product.price),
     size: item.size,
   }));
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = Number(items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2));
+
+  return { items, total };
+}
+
+export async function createOrder(
+  userId: string,
+  input: CreateOrderDto
+): Promise<OrderSummary> {
+  const { items, total } = await prepareOrder(userId, input.addressId);
 
   try {
-    const order = await orderRepository.createFromCart(
-      userId,
-      input.addressId,
-      items,
-      Number(total.toFixed(2))
-    );
+    const order = await orderRepository.createFromCart(userId, input.addressId, items, total);
     return toOrderSummary(order);
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('STOCK:')) {
+      throw new AppError(409, err.message.slice('STOCK:'.length));
+    }
+    throw err;
+  }
+}
+
+export async function initiateEsewaPayment(
+  userId: string,
+  input: CreateOrderDto
+): Promise<{ orderId: string; formUrl: string; fields: EsewaFormFields }> {
+  const { items, total } = await prepareOrder(userId, input.addressId);
+
+  const order = await orderRepository.createPendingEsewaOrder(
+    userId,
+    input.addressId,
+    items,
+    total
+  );
+
+  const fields = esewa.buildPaymentFields({
+    totalAmount: total.toString(),
+    transactionUuid: order.id,
+    successUrl: `${env.CLIENT_URL}/checkout/callback`,
+    failureUrl: `${env.CLIENT_URL}/checkout/callback?status=failure`,
+  });
+
+  return { orderId: order.id, formUrl: env.ESEWA_FORM_URL, fields };
+}
+
+export async function resumeEsewaPayment(
+  userId: string,
+  orderId: string
+): Promise<{ orderId: string; formUrl: string; fields: EsewaFormFields }> {
+  const order = await orderRepository.findByIdForUser(orderId, userId);
+  if (!order) {
+    throw new AppError(404, 'Order not found');
+  }
+  if (order.paymentMethod !== 'ESEWA') {
+    throw new AppError(400, 'This order is not an eSewa payment');
+  }
+  if (order.paymentStatus === 'PAID') {
+    throw new AppError(409, 'This order has already been paid');
+  }
+  if (order.paymentStatus !== 'PENDING' || order.status === 'CANCELLED') {
+    throw new AppError(409, 'This payment can no longer be completed');
+  }
+
+  const total = Number(order.total);
+
+  // The customer may have actually completed the payment before navigating
+  // away; reconcile with eSewa first so we finalize instead of re-charging.
+  const lookup = await esewa.checkTransactionStatus(total.toString(), order.id);
+  if (lookup.status === 'COMPLETE') {
+    await orderRepository.finalizePaidEsewaOrder(order.id, userId, lookup.refId);
+    throw new AppError(409, 'This order has already been paid');
+  }
+
+  const fields = esewa.buildPaymentFields({
+    totalAmount: total.toString(),
+    transactionUuid: order.id,
+    successUrl: `${env.CLIENT_URL}/checkout/callback`,
+    failureUrl: `${env.CLIENT_URL}/checkout/callback?status=failure`,
+  });
+
+  return { orderId: order.id, formUrl: env.ESEWA_FORM_URL, fields };
+}
+
+export async function cancelPendingOrder(
+  userId: string,
+  orderId: string
+): Promise<OrderSummary> {
+  const order = await orderRepository.findByIdForUser(orderId, userId);
+  if (!order) {
+    throw new AppError(404, 'Order not found');
+  }
+  if (order.paymentStatus === 'PAID') {
+    throw new AppError(409, 'A paid order cannot be cancelled here');
+  }
+  if (order.status === 'CANCELLED') {
+    return toOrderSummary(order);
+  }
+  if (order.paymentMethod !== 'ESEWA' || order.paymentStatus !== 'PENDING') {
+    throw new AppError(409, 'This order cannot be cancelled');
+  }
+
+  const cancelled = await orderRepository.markPaymentFailed(order.id);
+  return toOrderSummary(cancelled);
+}
+
+export async function verifyEsewaPayment(
+  userId: string,
+  input: VerifyEsewaDto
+): Promise<OrderSummary> {
+  let data: EsewaCallbackData;
+  try {
+    data = JSON.parse(Buffer.from(input.data, 'base64').toString('utf-8'));
+  } catch {
+    throw new AppError(400, 'Invalid payment response');
+  }
+
+  if (!esewa.verifyCallbackSignature(data)) {
+    throw new AppError(400, 'Payment response failed verification');
+  }
+
+  const order = await orderRepository.findByIdForUser(data.transaction_uuid, userId);
+  if (!order) {
+    throw new AppError(404, 'Order not found for this payment');
+  }
+
+  const lookup = await esewa.checkTransactionStatus(data.total_amount, data.transaction_uuid);
+
+  if (lookup.status !== 'COMPLETE') {
+    await orderRepository.markPaymentFailed(order.id);
+    throw new AppError(402, `Payment ${lookup.status.toLowerCase()}. Order was not placed.`);
+  }
+
+  try {
+    const finalized = await orderRepository.finalizePaidEsewaOrder(order.id, userId, lookup.refId);
+    if (!finalized) {
+      throw new AppError(404, 'Order not found');
+    }
+    return toOrderSummary(finalized);
   } catch (err) {
     if (err instanceof Error && err.message.startsWith('STOCK:')) {
       throw new AppError(409, err.message.slice('STOCK:'.length));

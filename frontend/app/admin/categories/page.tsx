@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { handleCreateCategory } from "@/lib/actions/admin-action";
 import { handleGetAllCategories } from "@/lib/actions/category-action";
 import { useToast } from "@/context/ToastContext";
+import { useCsrf } from "@/app/_components/CsrfProvider";
 
 const slugify = (value: string) =>
     value
@@ -16,6 +17,7 @@ const SLUG_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export default function AdminCategories() {
     const toast = useToast();
+    const csrfToken = useCsrf();
     const [categories, setCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -64,7 +66,7 @@ export default function AdminCategories() {
         if (description.trim()) payload.description = description.trim();
 
         setSubmitting(true);
-        const result = await handleCreateCategory(payload);
+        const result = await handleCreateCategory(csrfToken, payload);
         setSubmitting(false);
 
         if (result.success) {
